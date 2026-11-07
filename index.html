@@ -94,4 +94,759 @@
     <div id="ui-layer">
       <div class="score-board">
         <div class="label">而家高度</div>
-        <div class="value"><span id="scoreValue">0</
+        <div class="value"><span id="scoreValue">0</span><span class="unit"> cm</span></div>
+        <div class="height-info" id="heightDesc">香港小販攤檔</div>
+      </div>
+    </div>
+    <div id="start-screen">
+      <h1>魚蛋接接樂</h1>
+      <div class="subtitle">用牙籤串住從天而降嘅魚蛋！</div>
+      <button class="btn" id="startBtn">開始遊戲</button>
+      <div class="howto">
+        <strong>玩法：</strong><br>
+        • 左右移動牙籤串住魚蛋<br>
+        • 魚蛋會疊喺牙籤上，牙籤會伸長<br>
+        • 每串一粒 +1cm<br>
+        • 漏接一粒就 GAME OVER<br>
+        • 場景會一路向上變
+      </div>
+    </div>
+    <div id="gameover-screen" class="hidden">
+      <h2>魚蛋落地喇！</h2>
+      <div>你串咗</div>
+      <div class="final-score"><span id="finalScore">0</span> cm</div>
+      <div class="final-height" id="finalHeight">到達：香港小販攤檔</div>
+      <button class="btn" id="restartBtn">再嚟過</button>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+    const scoreValueEl = document.getElementById('scoreValue');
+    const heightDescEl = document.getElementById('heightDesc');
+    const startScreen = document.getElementById('start-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const finalScoreEl = document.getElementById('finalScore');
+    const finalHeightEl = document.getElementById('finalHeight');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let W = 400, H = 700, dpr = 1;
+    let score = 0;
+    let gameRunning = false;
+    let gameOver = false;
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let baseSpawnInterval = 1.5;
+    let fallingBalls = [];
+    let stackedBalls = [];
+    let particles = [];
+    let stickX = 200;
+    let stickTargetX = 200;
+    let isPointerDown = false;
+
+    let transition = { active:false, progress:0, fromStage:null, toStage:null, duration:1.2 };
+    let currentStageIndex = 0;
+
+    const stages = [
+      { min:0,   max:12,  name:'香港小販攤檔', key:'stall' },
+      { min:12,  max:28,  name:'旺角霓虹街',   key:'mongkok' },
+      { min:28,  max:50,  name:'維多利亞港',   key:'harbour' },
+      { min:50,  max:78,  name:'中環天際線',   key:'skyline' },
+      { min:78,  max:115, name:'高空雲層',     key:'clouds' },
+      { min:115, max:165, name:'近地軌道',     key:'orbit' },
+      { min:165, max:99999, name:'深空宇宙',   key:'deepspace' }
+    ];
+
+    function getStageIndexByScore(s) {
+      for (let i = 0; i < stages.length; i++) {
+        if (s >= stages[i].min && s < stages[i].max) return i;
+      }
+      return stages.length - 1;
+    }
+    function getCurrentStage() {
+      return stages[currentStageIndex] || stages[0];
+    }
+
+    function getBallRadius() {
+      const base = Math.max(18, W * 0.048);
+      const mild = Math.max(0.75, 1 - Math.max(0, stackedBalls.length - 18) * 0.01);
+      return base * mild;
+    }
+
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      dpr = window.devicePixelRatio || 1;
+      let rw = rect.width;
+      let rh = rect.height;
+      if (rw < 50 || rh < 50) {
+        rw = Math.min(window.innerWidth, 420);
+        rh = Math.min(window.innerHeight, rw * 16 / 9);
+      }
+      W = Math.max(200, Math.floor(rw * dpr));
+      H = Math.max(300, Math.floor(rh * dpr));
+      canvas.width = W;
+      canvas.height = H;
+      canvas.style.width = rw + 'px';
+      canvas.style.height = rh + 'px';
+      if (!gameRunning) {
+        stickX = W / 2;
+        stickTargetX = W / 2;
+      }
+    }
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function() {
+      setTimeout(resize, 100);
+    });
+
+    function getPointerX(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+      if (!rect.width) return stickTargetX;
+      return (clientX - rect.left) * (W / rect.width);
+    }
+
+    canvas.addEventListener('pointerdown', function(e) {
+      if (!gameRunning) return;
+      isPointerDown = true;
+      stickTargetX = getPointerX(e);
+      try { canvas.setPointerCapture(e.pointerId); } catch(err) {}
+    });
+    canvas.addEventListener('pointermove', function(e) {
+      if (!gameRunning || !isPointerDown) return;
+      stickTargetX = getPointerX(e);
+    });
+    canvas.addEventListener('pointerup', function() { isPointerDown = false; });
+    canvas.addEventListener('pointercancel', function() { isPointerDown = false; });
+
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      if (!gameRunning) return;
+      isPointerDown = true;
+      stickTargetX = getPointerX(e);
+    }, { passive: false });
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      if (!gameRunning) return;
+      stickTargetX = getPointerX(e);
+    }, { passive: false });
+    canvas.addEventListener('touchend', function() { isPointerDown = false; });
+
+    const keys = {};
+    window.addEventListener('keydown', function(e) {
+      keys[e.key] = true;
+      if ((e.key === ' ' || e.key === 'Enter') && !gameRunning && !gameOver) startGame();
+      if ((e.key === ' ' || e.key === 'Enter') && gameOver) restartGame();
+    });
+    window.addEventListener('keyup', function(e) { keys[e.key] = false; });
+
+    function Fishball(isStacked) {
+      this.baseR = getBallRadius();
+      this.x = 0;
+      this.y = 0;
+      this.rotation = Math.random() * Math.PI * 2;
+      this.rotSpeed = (Math.random() - 0.5) * 0.07;
+      this.isStacked = !!isStacked;
+      this.wobble = Math.random() * Math.PI * 2;
+      this.wobbleSpeed = 0.06 + Math.random() * 0.04;
+      this.sizeJitter = 0.94 + Math.random() * 0.12;
+      this.texSeed = Math.random() * 100;
+      if (!isStacked) {
+        this.x = this.baseR + Math.random() * (W - this.baseR * 2);
+        this.y = -this.baseR - 30;
+        const speedFactor = 1 + score * 0.025;
+        this.vy = (H * 0.28 + Math.random() * H * 0.12) * speedFactor / 60;
+      }
+    }
+    Fishball.prototype.update = function(dt) {
+      if (!this.isStacked) {
+        this.y += this.vy * dt * 60;
+        this.rotation += this.rotSpeed;
+      } else {
+        this.wobble += this.wobbleSpeed;
+      }
+    };
+    Fishball.prototype.draw = function() {
+      const r = this.baseR * this.sizeJitter;
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      if (this.isStacked) ctx.rotate(Math.sin(this.wobble) * 0.05);
+      else ctx.rotate(this.rotation);
+
+      ctx.beginPath();
+      ctx.ellipse(r * 0.1, r * 0.2, r * 0.9, r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fill();
+
+      const body = ctx.createRadialGradient(-r * 0.25, -r * 0.3, r * 0.05, 0, 0, r);
+      body.addColorStop(0, '#fff8e1');
+      body.addColorStop(0.22, '#ffe9b0');
+      body.addColorStop(0.5, '#ffd54f');
+      body.addColorStop(0.78, '#ffb300');
+      body.addColorStop(0.92, '#e65100');
+      body.addColorStop(1, '#bf360c');
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = body;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(120,40,0,0.22)';
+      ctx.lineWidth = Math.max(1, r * 0.05);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.3, -r * 0.32, r * 0.34, r * 0.26, -0.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,245,0.55)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(-r * 0.18, -r * 0.42, r * 0.09, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fill();
+
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2 + this.texSeed;
+        const d = r * (0.3 + (i % 3) * 0.1);
+        const sr = r * (0.04 + (i % 2) * 0.02);
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * d, Math.sin(a) * d, sr, 0, Math.PI * 2);
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(200,100,20,0.15)' : 'rgba(160,70,10,0.12)';
+        ctx.fill();
+      }
+
+      if (this.isStacked) {
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.15, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(40,15,0,0.65)';
+        ctx.fill();
+      }
+      ctx.restore();
+    };
+
+    function Particle(x, y, color) {
+      this.x = x; this.y = y;
+      this.vx = (Math.random() - 0.5) * 7;
+      this.vy = (Math.random() - 0.5) * 7 - 2;
+      this.life = 1;
+      this.decay = 0.03 + Math.random() * 0.025;
+      this.color = color;
+      this.size = 2.5 + Math.random() * 4;
+    }
+    Particle.prototype.update = function() {
+      this.x += this.vx; this.y += this.vy;
+      this.vy += 0.18; this.life -= this.decay;
+    };
+    Particle.prototype.draw = function() {
+      ctx.globalAlpha = Math.max(0, this.life);
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    };
+
+    function createCatchParticles(x, y) {
+      const colors = ['#ffb74d', '#ffd54f', '#ffe082', '#ff8a65', '#fff59d'];
+      for (let i = 0; i < 10; i++) {
+        particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
+      }
+    }
+
+    function getStickGeometry() {
+      const baseY = H - H * 0.08;
+      const ballR = getBallRadius();
+      const stickLen = H * 0.16 + stackedBalls.length * ballR * 1.75;
+      const tipY = baseY - stickLen;
+      return { baseY: baseY, stickLen: stickLen, tipY: tipY, stickW: Math.max(5, W * 0.012), ballR: ballR };
+    }
+
+    function drawStick() {
+      const geo = getStickGeometry();
+      stickX += (stickTargetX - stickX) * 0.25;
+      stickX = Math.max(geo.stickW * 3, Math.min(W - geo.stickW * 3, stickX));
+
+      ctx.save();
+      ctx.translate(stickX, geo.baseY);
+
+      const grad = ctx.createLinearGradient(-geo.stickW, 0, geo.stickW, 0);
+      grad.addColorStop(0, '#3e2723');
+      grad.addColorStop(0.3, '#8d6e63');
+      grad.addColorStop(0.55, '#d7ccc8');
+      grad.addColorStop(0.8, '#8d6e63');
+      grad.addColorStop(1, '#3e2723');
+
+      ctx.beginPath();
+      ctx.moveTo(-geo.stickW * 0.55, 0);
+      ctx.lineTo(-geo.stickW * 0.32, -geo.stickLen);
+      ctx.lineTo(geo.stickW * 0.32, -geo.stickLen);
+      ctx.lineTo(geo.stickW * 0.55, 0);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-geo.stickW * 0.32, -geo.stickLen);
+      ctx.lineTo(0, -geo.stickLen - 14);
+      ctx.lineTo(geo.stickW * 0.32, -geo.stickLen);
+      ctx.closePath();
+      ctx.fillStyle = '#5d4037';
+      ctx.fill();
+
+      ctx.restore();
+      return { tipX: stickX, tipY: geo.tipY - 10, r: 18 };
+    }
+
+    function drawStall(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const sky = ctx.createLinearGradient(0, 0, 0, H * 0.45);
+      sky.addColorStop(0, '#1a237e');
+      sky.addColorStop(0.5, '#283593');
+      sky.addColorStop(1, '#5c6bc0');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H * 0.45);
+
+      const ground = ctx.createLinearGradient(0, H * 0.4, 0, H);
+      ground.addColorStop(0, '#3e2723');
+      ground.addColorStop(1, '#1a0e08');
+      ctx.fillStyle = ground;
+      ctx.fillRect(0, H * 0.4, W, H * 0.6);
+
+      const ay = H * 0.38;
+      const sw = W / 9;
+      for (let i = 0; i < 11; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#c62828' : '#fafafa';
+        ctx.fillRect(i * sw - 6, ay, sw + 2, H * 0.08);
+      }
+      ctx.fillStyle = '#b71c1c';
+      ctx.beginPath();
+      ctx.moveTo(0, ay + H * 0.08);
+      for (let i = 0; i <= 10; i++) {
+        ctx.lineTo((i / 10) * W, ay + H * 0.08 + (i % 2 === 0 ? 12 : 0));
+      }
+      ctx.lineTo(W, ay + H * 0.15);
+      ctx.lineTo(0, ay + H * 0.15);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#455a64';
+      ctx.fillRect(W * 0.06, H * 0.54, W * 0.88, H * 0.2);
+      ctx.fillStyle = '#90a4ae';
+      ctx.fillRect(W * 0.06, H * 0.54, W * 0.88, H * 0.028);
+
+      for (let i = 0; i < 6; i++) {
+        const lx = W * (0.13 + i * 0.14);
+        const ly = ay + H * 0.04;
+        const g = ctx.createRadialGradient(lx, ly, 1, lx, ly, 18);
+        g.addColorStop(0, 'rgba(255,220,80,0.55)');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffe082';
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#fffde7';
+      ctx.fillRect(W * 0.14, H * 0.58, W * 0.3, H * 0.11);
+      ctx.strokeStyle = '#5d4037';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(W * 0.14, H * 0.58, W * 0.3, H * 0.11);
+      ctx.fillStyle = '#4e342e';
+      ctx.font = Math.floor(W * 0.028) + 'px sans-serif';
+      ctx.fillText('魚蛋  $12', W * 0.17, H * 0.63);
+      ctx.fillText('辣醬  加$2', W * 0.17, H * 0.67);
+
+      ctx.fillStyle = '#e53935';
+      ctx.fillRect(W * 0.55, H * 0.59, W * 0.05, H * 0.08);
+      ctx.fillStyle = '#43a047';
+      ctx.fillRect(W * 0.63, H * 0.59, W * 0.05, H * 0.08);
+      ctx.fillStyle = '#fb8c00';
+      ctx.fillRect(W * 0.71, H * 0.59, W * 0.05, H * 0.08);
+      ctx.restore();
+    }
+
+    function drawMongkok(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#0a0a1a');
+      g.addColorStop(1, '#1a1a30');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      const signs = [
+        {x:0.05,y:0.12,c:'#ff1744',t:'茶餐廳',s:0.04},
+        {x:0.45,y:0.08,c:'#00e676',t:'魚蛋粉',s:0.038},
+        {x:0.22,y:0.22,c:'#ffea00',t:'燒味',s:0.036},
+        {x:0.65,y:0.18,c:'#ff4081',t:'奶茶',s:0.034},
+        {x:0.08,y:0.35,c:'#40c4ff',t:'雲吞麵',s:0.032},
+        {x:0.55,y:0.32,c:'#ff6e40',t:'豬腸粉',s:0.03}
+      ];
+      for (let i = 0; i < signs.length; i++) {
+        const n = signs[i];
+        ctx.font = 'bold ' + Math.floor(W * n.s) + 'px sans-serif';
+        ctx.fillStyle = n.c;
+        ctx.shadowColor = n.c;
+        ctx.shadowBlur = 14;
+        ctx.fillText(n.t, n.x * W, n.y * H);
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.fillStyle = 'rgba(8,10,20,0.9)';
+      const blds = [[0,0.48,0.2],[0.18,0.36,0.16],[0.35,0.52,0.18],[0.55,0.4,0.15],[0.72,0.48,0.2]];
+      for (let i = 0; i < blds.length; i++) {
+        const bx = blds[i][0], bh = blds[i][1], bw = blds[i][2];
+        const x = bx * W, h = bh * H, w = bw * W;
+        ctx.fillStyle = 'rgba(8,10,20,0.9)';
+        ctx.fillRect(x, H - h, w, h);
+        ctx.fillStyle = 'rgba(255,220,100,0.2)';
+        for (let wy = H - h + 10; wy < H - 10; wy += 14) {
+          for (let wx = x + 4; wx < x + w - 4; wx += 11) {
+            if ((wx * wy) % 7 !== 0) ctx.fillRect(wx, wy, 5, 6);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawHarbour(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+      sky.addColorStop(0, '#0d1b2a');
+      sky.addColorStop(0.5, '#1b3a5c');
+      sky.addColorStop(1, '#3d5a80');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H * 0.55);
+
+      const water = ctx.createLinearGradient(0, H * 0.55, 0, H);
+      water.addColorStop(0, '#0a1628');
+      water.addColorStop(1, '#061018');
+      ctx.fillStyle = water;
+      ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+      ctx.fillStyle = 'rgba(5,15,30,0.92)';
+      const skyline = [[0,0.22,0.08],[0.08,0.35,0.1],[0.18,0.28,0.07],[0.26,0.42,0.09],[0.36,0.25,0.06],[0.43,0.48,0.11],[0.55,0.32,0.08],[0.64,0.4,0.09],[0.74,0.22,0.07],[0.82,0.38,0.1],[0.92,0.28,0.08]];
+      for (let i = 0; i < skyline.length; i++) {
+        const bx = skyline[i][0], bh = skyline[i][1], bw = skyline[i][2];
+        ctx.fillRect(bx * W, H * 0.55 - bh * H, bw * W, bh * H);
+      }
+      ctx.fillStyle = 'rgba(255,220,120,0.3)';
+      for (let i = 0; i < 35; i++) {
+        const lx = (i * 47) % W;
+        const ly = H * 0.55 - (15 + (i * 31) % 70);
+        if (ly > H * 0.2) ctx.fillRect(lx, ly, 3, 4);
+      }
+      ctx.restore();
+    }
+
+    function drawSkyline(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#020617');
+      g.addColorStop(1, '#1e293b');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      const blds = [[0.05,0.55,0.1],[0.16,0.7,0.09],[0.27,0.45,0.08],[0.37,0.8,0.12],[0.5,0.5,0.09],[0.6,0.65,0.1],[0.72,0.4,0.08],[0.82,0.58,0.1],[0.92,0.35,0.07]];
+      for (let i = 0; i < blds.length; i++) {
+        const bx = blds[i][0], bh = blds[i][1], bw = blds[i][2];
+        const x = bx * W, h = bh * H, w = bw * W;
+        ctx.fillStyle = 'rgba(15,25,50,0.95)';
+        ctx.fillRect(x, H - h, w, h);
+        ctx.fillStyle = 'rgba(255,220,100,0.22)';
+        for (let wy = H - h + 12; wy < H - 10; wy += 15) {
+          for (let wx = x + 5; wx < x + w - 5; wx += 11) {
+            if ((wx + wy + i) % 5 !== 0) ctx.fillRect(wx, wy, 5, 7);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawClouds(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#0c1445');
+      g.addColorStop(0.4, '#1a3a6e');
+      g.addColorStop(1, '#87ceeb');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      function cloud(x, y, s) {
+        ctx.beginPath();
+        ctx.arc(x, y, s * 0.5, 0, Math.PI * 2);
+        ctx.arc(x + s * 0.4, y - s * 0.15, s * 0.4, 0, Math.PI * 2);
+        ctx.arc(x + s * 0.7, y + s * 0.05, s * 0.35, 0, Math.PI * 2);
+        ctx.arc(x - s * 0.3, y + s * 0.1, s * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      cloud(W * 0.2, H * 0.25, 50);
+      cloud(W * 0.65, H * 0.15, 65);
+      cloud(W * 0.45, H * 0.5, 45);
+      ctx.restore();
+    }
+
+    function drawOrbit(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#000005');
+      g.addColorStop(1, '#0a1025');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 90; i++) {
+        const sx = (i * 97) % W;
+        const sy = (i * 53) % H;
+        ctx.globalAlpha = alpha * (0.3 + (i % 5) * 0.1);
+        ctx.beginPath();
+        ctx.arc(sx, sy, (i % 3 === 0) ? 1.4 : 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = alpha;
+      const earth = ctx.createRadialGradient(W / 2, H + W * 0.5, W * 0.2, W / 2, H + W * 0.5, W);
+      earth.addColorStop(0, 'rgba(30,100,180,0.35)');
+      earth.addColorStop(1, 'transparent');
+      ctx.fillStyle = earth;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    function drawDeepSpace(alpha) {
+      if (alpha === undefined) alpha = 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#000008';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 110; i++) {
+        const sx = (i * 83) % W;
+        const sy = (i * 47) % H;
+        ctx.globalAlpha = alpha * (0.25 + (i % 6) * 0.1);
+        ctx.beginPath();
+        ctx.arc(sx, sy, (i % 4 === 0) ? 1.5 : 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = alpha;
+      const neb = ctx.createRadialGradient(W * 0.75, H * 0.3, 5, W * 0.75, H * 0.3, W * 0.4);
+      neb.addColorStop(0, 'rgba(140,50,200,0.25)');
+      neb.addColorStop(1, 'transparent');
+      ctx.fillStyle = neb;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+
+    const bgDrawers = {
+      stall: drawStall,
+      mongkok: drawMongkok,
+      harbour: drawHarbour,
+      skyline: drawSkyline,
+      clouds: drawClouds,
+      orbit: drawOrbit,
+      deepspace: drawDeepSpace
+    };
+
+    function drawBackground() {
+      if (transition.active && transition.fromStage && transition.toStage) {
+        const fromKey = transition.fromStage.key;
+        const toKey = transition.toStage.key;
+        const p = transition.progress;
+        const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        if (bgDrawers[fromKey]) bgDrawers[fromKey](1 - ease);
+        if (bgDrawers[toKey]) bgDrawers[toKey](ease);
+      } else {
+        const stage = getCurrentStage();
+        if (bgDrawers[stage.key]) bgDrawers[stage.key](1);
+        else drawStall(1);
+      }
+    }
+
+    function spawnFishball() {
+      fallingBalls.push(new Fishball(false));
+    }
+
+    function checkCollision(ball, tip) {
+      const dx = ball.x - tip.tipX;
+      const dy = ball.y - tip.tipY;
+      const r = ball.baseR * ball.sizeJitter;
+      return Math.sqrt(dx * dx + dy * dy) < r + tip.r * 0.7;
+    }
+
+    function skewerBall(ball) {
+      const stacked = new Fishball(true);
+      stacked.baseR = getBallRadius();
+      stacked.sizeJitter = ball.sizeJitter;
+      stacked.rotation = ball.rotation;
+      stacked.texSeed = ball.texSeed;
+      stackedBalls.push(stacked);
+      createCatchParticles(ball.x, ball.y);
+      score += 1;
+      updateUI();
+      checkStageTransition();
+    }
+
+    function updateStackedPositions(tipY, ballR) {
+      const spacing = ballR * 1.7;
+      for (let i = 0; i < stackedBalls.length; i++) {
+        const b = stackedBalls[i];
+        b.baseR = getBallRadius();
+        b.x = stickX;
+        b.y = tipY + (i + 0.55) * spacing;
+      }
+    }
+
+    function checkStageTransition() {
+      const newIndex = getStageIndexByScore(score);
+      if (newIndex !== currentStageIndex && !transition.active) {
+        transition.active = true;
+        transition.progress = 0;
+        transition.fromStage = stages[currentStageIndex];
+        transition.toStage = stages[newIndex];
+        currentStageIndex = newIndex;
+      }
+    }
+
+    function update(dt) {
+      if (!gameRunning) return;
+
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        stickTargetX = Math.max(40, stickTargetX - W * 0.022);
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        stickTargetX = Math.min(W - 40, stickTargetX + W * 0.022);
+      }
+
+      if (transition.active) {
+        transition.progress += dt / transition.duration;
+        if (transition.progress >= 1) {
+          transition.progress = 1;
+          transition.active = false;
+        }
+      }
+
+      spawnTimer += dt;
+      const interval = Math.max(0.4, baseSpawnInterval - score * 0.01);
+      if (spawnTimer >= interval) {
+        spawnTimer = 0;
+        spawnFishball();
+      }
+
+      stickX += (stickTargetX - stickX) * 0.25;
+      stickX = Math.max(30, Math.min(W - 30, stickX));
+
+      const geo = getStickGeometry();
+      const tip = { tipX: stickX, tipY: geo.tipY - 10, r: 18 };
+
+      for (let i = fallingBalls.length - 1; i >= 0; i--) {
+        const b = fallingBalls[i];
+        b.update(dt);
+        if (checkCollision(b, tip)) {
+          skewerBall(b);
+          fallingBalls.splice(i, 1);
+          continue;
+        }
+        if (b.y - b.baseR > H + 40) {
+          endGame();
+          return;
+        }
+      }
+
+      updateStackedPositions(geo.tipY, geo.ballR);
+      for (let i = 0; i < stackedBalls.length; i++) stackedBalls[i].update(dt);
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function updateUI() {
+      scoreValueEl.textContent = String(score);
+      heightDescEl.textContent = getCurrentStage().name;
+    }
+
+    function draw() {
+      if (W < 50 || H < 50) return;
+      drawBackground();
+      for (let i = 0; i < fallingBalls.length; i++) fallingBalls[i].draw();
+      drawStick();
+      for (let i = 0; i < stackedBalls.length; i++) stackedBalls[i].draw();
+      for (let i = 0; i < particles.length; i++) particles[i].draw();
+    }
+
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+      lastTime = timestamp;
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      score = 0;
+      fallingBalls = [];
+      stackedBalls = [];
+      particles = [];
+      spawnTimer = 0;
+      gameRunning = true;
+      gameOver = false;
+      currentStageIndex = 0;
+      transition.active = false;
+      stickX = W / 2;
+      stickTargetX = W / 2;
+      updateUI();
+      startScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+    }
+
+    function endGame() {
+      gameRunning = false;
+      gameOver = true;
+      finalScoreEl.textContent = String(score);
+      finalHeightEl.textContent = '到達：' + getCurrentStage().name;
+      gameoverScreen.classList.remove('hidden');
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', restartGame);
+
+    function init() {
+      resize();
+      requestAnimationFrame(function() {
+        resize();
+        requestAnimationFrame(gameLoop);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>
