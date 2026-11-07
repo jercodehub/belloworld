@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Belloworld - Banana Rain</title>
+  <title>全球香蕉批發大王 - 蕉易所</title>
   <style>
     * {
       box-sizing: border-box;
@@ -11,17 +11,61 @@
       padding: 0;
     }
     body {
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       background-color: #fef08a;
       font-family: system-ui, -apple-system, sans-serif;
-      overflow: hidden;
+      color: #3f3f46;
+      overflow-x: hidden;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+      margin-top: 10px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      color: #854d0e;
+      margin-bottom: 5px;
+    }
+    p.subtitle {
+      font-size: 1rem;
+      color: #a16207;
+    }
+    /* 即時行情看板 */
+    .market-board {
+      background: #fff;
+      border: 3px solid #ca8a04;
+      border-radius: 16px;
+      padding: 15px 20px;
+      width: 100%;
+      max-width: 450px;
+      margin-bottom: 25px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    .market-board h3 {
+      font-size: 1.1rem;
+      color: #854d0e;
+      margin-bottom: 10px;
+      border-bottom: 2px dashed #fde047;
+      padding-bottom: 5px;
+    }
+    .ticker-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      margin: 8px 0;
+      font-weight: bold;
+    }
+    .up { color: #16a34a; }
+    .down { color: #dc2626; }
+
+    /* 按鈕區 */
     .bello-btn {
-      padding: 20px 45px;
-      font-size: 2rem;
+      padding: 20px 50px;
+      font-size: 2.2rem;
       font-weight: bold;
       color: #854d0e;
       background-color: #fde047;
@@ -32,18 +76,49 @@
       transition: transform 0.1s ease, box-shadow 0.1s ease;
       z-index: 10;
       user-select: none;
+      margin-bottom: 30px;
     }
     .bello-btn:active {
       transform: scale(0.92);
       box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
     }
+
+    /* 霸權客戶清單 */
+    .clients-section {
+      width: 100%;
+      max-width: 450px;
+      background: #fffbeb;
+      border: 2px solid #fde047;
+      border-radius: 16px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    .clients-section h3 {
+      color: #854d0e;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+    .client-card {
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+    .client-card span {
+      font-weight: bold;
+      color: #b45309;
+    }
+
+    /* 香蕉雨特效 */
     .banana {
       position: absolute;
       top: -60px;
       font-size: 2.5rem;
       pointer-events: none;
       animation: drop linear forwards;
-      z-index: 5;
+      z-index: 100;
     }
     @keyframes drop {
       0% {
@@ -52,42 +127,28 @@
       }
       100% {
         transform: translateY(105vh) rotate(360deg);
-        opacity: 0.8;
+        opacity: 0.9;
       }
     }
   </style>
 </head>
 <body>
 
-  <button class="bello-btn" onclick="dropBananas()">Bello</button>
+  <header>
+    <h1>🍌 全球香蕉批發帝國</h1>
+    <p class="subtitle">將頂級香蕉賣向全世界遊戲的傳奇大王</p>
+  </header>
 
-  <script>
-    function dropBananas() {
-      const count = Math.floor(Math.random() * 16) + 15; // 隨機產生 15 ~ 30 根香蕉
-      for (let i = 0; i < count; i++) {
-        createBanana();
-      }
-    }
-
-    function createBanana() {
-      const banana = document.createElement('div');
-      banana.classList.add('banana');
-      banana.innerText = '🍌';
-
-      const startX = Math.random() * window.innerWidth;
-      const duration = Math.random() * 1.5 + 1.5; // 掉落時間 1.5s ~ 3s
-      const delay = Math.random() * 0.5;
-
-      banana.style.left = `${startX}px`;
-      banana.style.animationDuration = `${duration}s`;
-      banana.style.animationDelay = `${delay}s`;
-
-      document.body.appendChild(banana);
-
-      setTimeout(() => {
-        banana.remove();
-      }, (duration + delay) * 1000);
-    }
-  </script>
-</body>
-</html>
+  <!-- 全球蕉易所行情看板 -->
+  <div class="market-board">
+    📈 全球「蕉易所」即時行情
+    <div class="ticker-item">
+      <span>🍄 瑪利歐王國（砸庫巴專用）</span>
+      <span class="up">$450.2 (+15%) 🚀</span>
+    </div>
+    <div class="ticker-item">
+      <span>🦍 大金剛島（終身VIP大單）</span>
+      <span class="down">$12.5 (-3%) 📉</span>
+    </div>
+    <div class="ticker-item">
+      <span>🟡 小小兵
