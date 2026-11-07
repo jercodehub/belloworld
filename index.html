@@ -1,918 +1,687 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>香蕉批發大王｜全球蕉易所</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>魚蛋接接樂 | Fish Ball Catcher</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
 
-  :root {
-    --banana: #FFD93D;
-    --orange: #FF9F1C;
-    --green: #2ECC71;
-    --red: #E74C3C;
-    --dark: #121212;
-    --card: #1e1e1e;
-    --border: #333;
-  }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(160deg, #0f0f0f 0%, #1a1200 40%, #0f0f0f 100%);
-    color: #eee;
-    min-height: 100vh;
-    overflow-x: hidden;
-    padding-bottom: 50px;
-  }
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
 
-  .float-text {
-    position: fixed;
-    font-weight: 900;
-    font-size: 1.35rem;
-    pointer-events: none;
-    z-index: 9999;
-    animation: floatUp 1.15s forwards;
-    text-shadow: 0 2px 8px #000;
-  }
-  @keyframes floatUp {
-    0% { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-70px) scale(1.25); }
-  }
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 9 / 16;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(255, 100, 50, 0.3);
+    }
 
-  .banana-rain {
-    position: fixed;
-    top: -40px;
-    font-size: 26px;
-    pointer-events: none;
-    z-index: 9998;
-    animation: fall linear forwards;
-  }
-  @keyframes fall {
-    to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
-  }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
 
-  header {
-    text-align: center;
-    padding: 22px 14px 10px;
-  }
-  h1 {
-    font-size: clamp(1.65rem, 5vw, 2.5rem);
-    font-weight: 900;
-    background: linear-gradient(90deg, #FFD93D, #FF9F1C, #FFD93D);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .subtitle { color: #888; margin-top: 5px; font-size: 0.92rem; }
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+    }
 
-  .stats-bar {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px 12px;
-    max-width: 920px;
-    margin: 0 auto 18px;
-    padding: 0 12px;
-  }
-  .stat {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 9px 14px;
-    min-width: 100px;
-    text-align: center;
-  }
-  .stat-label { font-size: 0.72rem; color: #888; }
-  .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--banana); margin-top: 2px; }
-  .stat-value.money { color: #2ECC71; }
-  .stat-value.level { color: #FF9F1C; }
-  .stat-value.warn { color: #E74C3C; }
+    .score-board {
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 12px 18px;
+      color: #fff;
+      text-align: center;
+      border: 2px solid rgba(255, 200, 50, 0.4);
+    }
 
-  /* 新鮮度條 */
-  .fresh-bar-wrap {
-    max-width: 920px;
-    margin: 0 auto 20px;
-    padding: 0 14px;
-  }
-  .fresh-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    margin-bottom: 6px;
-    color: #aaa;
-  }
-  .fresh-track {
-    height: 12px;
-    background: #2a2a2a;
-    border-radius: 20px;
-    overflow: hidden;
-    border: 1px solid #444;
-  }
-  .fresh-fill {
-    height: 100%;
-    border-radius: 20px;
-    transition: width 0.6s ease, background 0.4s;
-  }
+    .score-board .label {
+      font-size: 13px;
+      opacity: 0.85;
+      letter-spacing: 1px;
+    }
 
-  .section {
-    max-width: 920px;
-    margin: 0 auto 26px;
-    padding: 0 14px;
-  }
-  .section-title {
-    color: var(--banana);
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+    .score-board .value {
+      font-size: 32px;
+      font-weight: 900;
+      color: #ffd54f;
+      text-shadow: 0 2px 8px rgba(255, 180, 0, 0.5);
+      line-height: 1.2;
+    }
 
-  .exchange {
-    background: var(--card);
-    border-radius: 14px;
-    padding: 14px;
-    border: 1px solid var(--border);
-  }
-  .ticker {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 7px 10px;
-    font-size: 0.88rem;
-  }
-  .ticker-item { display: contents; }
-  .world-name { color: #ccc; }
-  .price { font-weight: 700; text-align: right; min-width: 65px; }
-  .change { font-weight: 700; text-align: right; min-width: 60px; }
-  .up { color: var(--green); }
-  .down { color: var(--red); }
+    .score-board .unit {
+      font-size: 14px;
+      color: #ffecb3;
+    }
 
-  .actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  @media (max-width: 520px) { .actions { grid-template-columns: 1fr; } }
+    .height-info {
+      font-size: 12px;
+      margin-top: 4px;
+      color: #aee;
+      opacity: 0.9;
+    }
 
-  .btn {
-    border: none;
-    border-radius: 13px;
-    padding: 15px 10px;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.12s;
-    font-family: inherit;
-    color: #111;
-  }
-  .btn:active { transform: scale(0.96); }
-  .btn-primary {
-    background: linear-gradient(135deg, #FF9F1C, #FFD93D);
-    box-shadow: 0 5px 18px rgba(255,159,28,0.35);
-  }
-  .btn-secondary {
-    background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
-    color: #eee;
-    border: 1px solid #555;
-  }
-  .btn:disabled {
-    opacity: 0.42;
-    cursor: not-allowed;
-    transform: none !important;
-  }
+    #start-screen, #gameover-screen {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(20,10,5,0.92), rgba(40,15,5,0.95));
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      padding: 24px;
+      z-index: 20;
+      pointer-events: auto;
+    }
 
-  .orders { display: flex; flex-direction: column; gap: 10px; }
-  .order-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    padding: 13px 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .order-info { flex: 1; min-width: 170px; }
-  .order-name { font-weight: 700; color: var(--banana); margin-bottom: 3px; font-size: 1.05rem; }
-  .order-detail { font-size: 0.86rem; color: #aaa; }
-  .order-actions { display: flex; gap: 8px; }
+    #start-screen h1 {
+      font-size: 42px;
+      font-weight: 900;
+      color: #ffb300;
+      text-shadow: 0 4px 12px rgba(255, 150, 0, 0.6);
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
 
-  .empty-orders {
-    text-align: center;
-    color: #666;
-    padding: 22px;
-    background: var(--card);
-    border-radius: 13px;
-    border: 1px dashed #333;
-  }
+    #start-screen .subtitle {
+      font-size: 16px;
+      color: #ffecb3;
+      margin-bottom: 28px;
+      opacity: 0.9;
+    }
 
-  #dk {
-    position: fixed;
-    bottom: -8px;
-    left: -160px;
-    font-size: 70px;
-    z-index: 100;
-    transition: left 2.7s linear;
-    pointer-events: none;
-    filter: drop-shadow(0 0 10px #000);
-  }
-  #dk.crawl { left: 110vw; }
+    .btn {
+      background: linear-gradient(180deg, #ff9800, #e65100);
+      color: #fff;
+      border: none;
+      padding: 16px 48px;
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(255, 100, 0, 0.5);
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+      letter-spacing: 1px;
+    }
 
-  .banana-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 16px;
-  }
-  .banana {
-    font-size: 50px;
-    cursor: pointer;
-    transition: transform 0.16s;
-    user-select: none;
-    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.45));
-  }
-  .banana:hover { transform: scale(1.15) rotate(-5deg); }
-  .banana:active { transform: scale(0.9); }
+    .btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 3px 10px rgba(255, 100, 0, 0.4);
+    }
 
-  .modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 3000;
-    justify-content: center;
-    align-items: center;
-    padding: 14px;
-  }
-  .modal.show { display: flex; }
-  .modal-content {
-    background: #222;
-    border: 3px solid var(--banana);
-    border-radius: 16px;
-    padding: 24px 20px;
-    max-width: 370px;
-    width: 100%;
-    text-align: center;
-    position: relative;
-    animation: popIn 0.26s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  @keyframes popIn {
-    from { transform: scale(0.6); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  .modal-content h3 { color: var(--banana); margin-bottom: 12px; font-size: 1.25rem; }
-  .modal-content p { margin: 6px 0; font-size: 0.95rem; line-height: 1.4; color: #ddd; }
-  .close-btn {
-    position: absolute;
-    top: 6px; right: 12px;
-    background: none; border: none;
-    color: #999; font-size: 1.5rem; cursor: pointer;
-  }
+    .howto {
+      margin-top: 32px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #ddd;
+      max-width: 300px;
+      background: rgba(255,255,255,0.08);
+      padding: 16px 20px;
+      border-radius: 12px;
+    }
 
-  .achievements {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 9px;
-  }
-  .ach {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    padding: 11px;
-    text-align: center;
-    font-size: 0.82rem;
-    opacity: 0.38;
-    transition: opacity 0.3s;
-  }
-  .ach.unlocked {
-    opacity: 1;
-    border-color: var(--banana);
-    box-shadow: 0 0 10px rgba(255,217,61,0.18);
-  }
-  .ach-icon { font-size: 1.5rem; margin-bottom: 3px; }
-  .ach-name { font-weight: 700; color: var(--banana); }
+    #gameover-screen h2 {
+      font-size: 36px;
+      color: #ff5252;
+      margin-bottom: 12px;
+      text-shadow: 0 0 20px rgba(255, 50, 50, 0.5);
+    }
 
-  .client-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 11px;
-  }
-  .client-card {
-    background: var(--card);
-    border-radius: 13px;
-    padding: 15px;
-    border: 1px solid var(--border);
-  }
-  .client-card .name { font-weight: 700; color: var(--banana); margin-bottom: 3px; font-size: 1.05rem; }
-  .client-card .role { font-size: 0.78rem; color: #777; margin-bottom: 7px; }
-  .client-card .quote { font-size: 0.88rem; color: #bbb; line-height: 1.4; font-style: italic; }
+    #gameover-screen .final-score {
+      font-size: 48px;
+      font-weight: 900;
+      color: #ffd54f;
+      margin: 8px 0;
+    }
 
-  .event-toast {
-    position: fixed;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: linear-gradient(135deg, #2a1a00, #3a2a00);
-    border: 2px solid var(--orange);
-    color: #fff;
-    padding: 12px 18px;
-    border-radius: 11px;
-    z-index: 4000;
-    font-weight: 700;
-    max-width: 90%;
-    text-align: center;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
-    animation: toastIn 0.35s ease;
-  }
-  @keyframes toastIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
+    #gameover-screen .final-height {
+      font-size: 18px;
+      color: #aee;
+      margin-bottom: 28px;
+    }
 
-  footer {
-    text-align: center;
-    padding: 28px 14px;
-    color: #555;
-    font-size: 0.82rem;
-  }
-  .hint { font-size: 0.78rem; color: #666; margin-top: 7px; text-align: center; }
-</style>
+    .hidden {
+      display: none !important;
+    }
+
+    #height-marker {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 3px;
+      pointer-events: none;
+      z-index: 5;
+    }
+  </style>
 </head>
 <body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
 
-<header>
-  <h1>🍌 香蕉批發大王</h1>
-  <p class="subtitle">把香蕉賣向全世界遊戲宇宙</p>
-</header>
-
-<!-- 狀態列 -->
-<div class="stats-bar">
-  <div class="stat">
-    <div class="stat-label">資金</div>
-    <div class="stat-value money" id="money">$5,000</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">庫存</div>
-    <div class="stat-value" id="stock">0 箱</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">等級</div>
-    <div class="stat-value level" id="level">Lv.1</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">總利潤</div>
-    <div class="stat-value" id="profit">$0</div>
-  </div>
-</div>
-
-<!-- 新鮮度 -->
-<div class="fresh-bar-wrap">
-  <div class="fresh-label">
-    <span>🍌 香蕉新鮮度</span>
-    <span id="freshText">100%</span>
-  </div>
-  <div class="fresh-track">
-    <div class="fresh-fill" id="freshFill" style="width:100%; background:#2ECC71;"></div>
-  </div>
-</div>
-
-<!-- 全球蕉易所 -->
-<div class="section">
-  <div class="section-title">📈 全球蕉易所 · 即時行情</div>
-  <div class="exchange">
-    <div class="ticker" id="ticker"></div>
-  </div>
-</div>
-
-<!-- 操作按鈕 -->
-<div class="section">
-  <div class="actions">
-    <button class="btn btn-primary" id="buyBtn" onclick="buyBananas()">🛒 入貨 50 箱 ($800)</button>
-    <button class="btn btn-secondary" id="callBtn" onclick="callGorilla()">🦍 呼叫大猩猩</button>
-  </div>
-  <p class="hint">新鮮度低於 35% 蕉會開始變壞。入貨可以回升新鮮度。</p>
-</div>
-
-<!-- 訂單 -->
-<div class="section">
-  <div class="section-title">📦 即時訂單</div>
-  <div class="orders" id="orders">
-    <div class="empty-orders">暫時未有訂單，稍等一下…</div>
-  </div>
-</div>
-
-<div id="dk">🦍</div>
-
-<!-- 香蕉品質檢驗器 -->
-<div class="section">
-  <div class="section-title">🔍 香蕉品質檢驗器</div>
-  <p class="hint" style="margin-bottom:12px;">點擊香蕉查看搞笑履歷</p>
-  <div class="banana-grid" id="bananaGrid"></div>
-</div>
-
-<!-- 成就 -->
-<div class="section">
-  <div class="section-title">🏆 成就</div>
-  <div class="achievements" id="achievements"></div>
-</div>
-
-<!-- 客戶名單 -->
-<div class="section">
-  <div class="section-title">👑 世界霸權客戶名單</div>
-  <div class="client-grid" id="clientGrid"></div>
-</div>
-
-<footer>
-  © 香蕉批發大王帝國 · 把香蕉賣到每個遊戲世界<br>
-  <span style="font-size:0.75rem;color:#444;">進度已自動儲存</span>
-</footer>
-
-<div class="modal" id="modal">
-  <div class="modal-content">
-    <button class="close-btn" onclick="closeModal()">×</button>
-    <h3 id="modalTitle">香蕉履歷</h3>
-    <div id="modalBody"></div>
-  </div>
-</div>
-
-<script>
-// ==================== 狀態 ====================
-const defaultState = {
-  money: 5000,
-  stock: 0,
-  level: 1,
-  exp: 0,
-  totalProfit: 0,
-  totalSold: 0,
-  freshness: 100,
-  achievements: {},
-  gorillaCount: 0
-};
-
-let state = loadState();
-let activeOrders = [];
-let spoilWarned = false;
-
-// ==================== 客戶資料（全部有 Icon） ====================
-const customers = [
-  { name: "瑪利歐", icon: "🍄", minQty: 20, maxQty: 80, payMul: 1.4 },
-  { name: "大金剛", icon: "🦍", minQty: 50, maxQty: 150, payMul: 1.6 },
-  { name: "小小兵", icon: "🍌", minQty: 30, maxQty: 100, payMul: 1.3 },
-  { name: "奇諾比奧", icon: "🍄", minQty: 15, maxQty: 60, payMul: 1.5 },
-  { name: "林克", icon: "🗡️", minQty: 10, maxQty: 40, payMul: 1.7 },
-  { name: "皮卡丘", icon: "⚡", minQty: 25, maxQty: 70, payMul: 1.35 },
-  { name: "卡比", icon: "⭐", minQty: 20, maxQty: 55, payMul: 1.45 },
-  { name: "村民", icon: "🧑‍🌾", minQty: 40, maxQty: 90, payMul: 1.2 },
-  { name: "庫巴", icon: "🐢", minQty: 30, maxQty: 70, payMul: 1.25 },
-  { name: "耀西", icon: "🦖", minQty: 15, maxQty: 45, payMul: 1.4 }
-];
-
-const clientList = [
-  { icon: "🍄", name: "瑪利歐 (Mario)", role: "戰略物資部部長", quote: "「用來砸庫巴的戰略物資，每年固定採購。品質穩定，砸下去很有手感。」" },
-  { icon: "🦍", name: "大金剛 (Donkey Kong)", role: "終身 VIP 大客戶", quote: "「買斷全球八成產量。誰敢跟我搶香蕉，我就把他從樹頂扔下去。」" },
-  { icon: "🍌", name: "小小兵 (Minions)", role: "瘋狂下單部隊", quote: "「BANANA!!! BANANA!!! BANANA!!! （已下單 9999 箱）」" },
-  { icon: "🍄", name: "奇諾比奧 (Toad)", role: "蘑菇王國採購官", quote: "「馬房最近需求暴增，請務必優先出貨給我們！急！非常急！」" },
-  { icon: "🗡️", name: "林克 (Link)", role: "海拉魯補給官", quote: "「烤香蕉加蜂蜜是恢復體力的神器。上次在森林裡差點被吃掉，靠你的香蕉活了下來。」" },
-  { icon: "⚡", name: "皮卡丘", role: "電系吉祥物", quote: "「皮卡皮卡～（翻譯：這批香蕉很甜，下次再多送一箱給我）」" },
-  { icon: "⭐", name: "卡比", role: "星之美食家", quote: "「吸——！好甜！再多給我一點！」" },
-  { icon: "🧑‍🌾", name: "村民", role: "綠寶石交易員", quote: "「嗯……這批蕉可以換不少綠寶石。」" }
-];
-
-const worlds = [
-  { name: "《薩爾達》馬房", base: 128 },
-  { name: "《瑪利歐》奇諾比奧", base: 95 },
-  { name: "《大金剛》香蕉島", base: 210 },
-  { name: "《原神》提瓦特", base: 88 },
-  { name: "《Minecraft》村民", base: 42 },
-  { name: "《寶可夢》道館", base: 73 },
-  { name: "《動森》小島", base: 55 },
-  { name: "《星之卡比》", base: 61 }
-];
-
-const bananaData = [
-  { title: "特級戰略香蕉", lines: ["產地：熱帶雨林深處", "甜度：100%（官方認證）", "用途：適合砸在敵人臉上", "耐久度：可連續砸 7 次庫巴", "評價：瑪利歐五星推薦"] },
-  { title: "大金剛專用巨蕉", lines: ["產地：香蕉島頂級果園", "重量：單根可當武器", "甜度：甜到能讓猩猩跳舞", "庫存狀態：已被大金剛預約 80%", "注意：請勿挑戰牠的所有權"] },
-  { title: "小小兵瘋狂蕉", lines: ["產地：不明（可能是實驗室）", "特色：會自己發出「BANANA!」叫聲", "甜度：超過人類理解範圍", "訂購量：已售出 9999 箱", "副作用：會讓人突然想穿黃色連身衣"] },
-  { title: "海拉魯恢復蕉", lines: ["產地：科洛克森林附近", "效果：烤過後恢復 3 顆心", "甜度：加蜂蜜後更神", "林克評價：「差點被吃掉時靠它活下來」", "保存方式：請放在希卡石板裡"] },
-  { title: "神秘發光蕉", lines: ["產地：？？？（可能來自異世界）", "特殊能力：夜晚會微微發光", "甜度：吃了會做奇怪的夢", "風險等級：中等（可能吸引寶可夢）", "研究員筆記：還在觀察中..."] },
-  { title: "村民交易蕉", lines: ["產地：Minecraft 平原村莊", "交易價格：1 個綠寶石 = 8 根", "甜度：普通但很耐放", "村民好感度：+2", "注意：鐵巨人好像也喜歡"] }
-];
-
-const achievementsList = [
-  { id: "first_buy", name: "初次入貨", icon: "🛒", desc: "第一次買香蕉" },
-  { id: "first_sell", name: "第一桶金", icon: "💰", desc: "完成第一張訂單" },
-  { id: "rich_10k", name: "萬元戶", icon: "💎", desc: "資金達到 $10,000" },
-  { id: "rich_50k", name: "蕉業大亨", icon: "👑", desc: "資金達到 $50,000" },
-  { id: "sold_500", name: "大量出貨", icon: "📦", desc: "累計賣出 500 箱" },
-  { id: "level_5", name: "資深批發商", icon: "📈", desc: "達到等級 5" },
-  { id: "gorilla", name: "猩猩之友", icon: "🦍", desc: "呼叫大猩猩 5 次" },
-  { id: "event", name: "見慣風浪", icon: "⚡", desc: "經歷過隨機事件" },
-  { id: "spoil", name: "痛心的教訓", icon: "🤢", desc: "第一次經歷蕉變壞" }
-];
-
-// ==================== 工具 ====================
-function loadState() {
-  try {
-    const saved = localStorage.getItem("bananaKingSave_v2");
-    if (saved) return { ...defaultState, ...JSON.parse(saved) };
-  } catch(e) {}
-  return { ...defaultState };
-}
-function saveState() {
-  localStorage.setItem("bananaKingSave_v2", JSON.stringify(state));
-}
-function formatMoney(n) {
-  return "$" + Math.floor(n).toLocaleString();
-}
-function showFloat(text, color = "#FFD93D") {
-  const el = document.createElement("div");
-  el.className = "float-text";
-  el.textContent = text;
-  el.style.left = (window.innerWidth / 2 - 40) + "px";
-  el.style.top = (window.innerHeight / 2 - 20) + "px";
-  el.style.color = color;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1150);
-}
-function showToast(msg) {
-  const old = document.querySelector(".event-toast");
-  if (old) old.remove();
-  const el = document.createElement("div");
-  el.className = "event-toast";
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-function updateUI() {
-  document.getElementById("money").textContent = formatMoney(state.money);
-  document.getElementById("stock").textContent = state.stock + " 箱";
-  document.getElementById("level").textContent = "Lv." + state.level;
-  document.getElementById("profit").textContent = formatMoney(state.totalProfit);
-
-  // 新鮮度
-  const fresh = Math.max(0, Math.min(100, state.freshness));
-  const fill = document.getElementById("freshFill");
-  const text = document.getElementById("freshText");
-  fill.style.width = fresh + "%";
-  text.textContent = Math.floor(fresh) + "%";
-
-  if (fresh > 65) fill.style.background = "#2ECC71";
-  else if (fresh > 35) fill.style.background = "#F1C40F";
-  else fill.style.background = "#E74C3C";
-
-  document.getElementById("stock").classList.toggle("warn", state.stock > 0 && fresh < 35);
-  document.getElementById("buyBtn").disabled = state.money < 800;
-}
-
-function addExp(amount) {
-  state.exp += amount;
-  const need = state.level * 100;
-  if (state.exp >= need) {
-    state.exp -= need;
-    state.level++;
-    showToast(`🎉 升級！現在是等級 ${state.level}（蕉壞得更慢了）`);
-    checkAchievement("level_5");
-  }
-}
-
-function checkAchievement(id) {
-  if (state.achievements[id]) return;
-  const ach = achievementsList.find(a => a.id === id);
-  if (!ach) return;
-  state.achievements[id] = true;
-  showToast(`🏆 成就解鎖：${ach.name}`);
-  renderAchievements();
-  saveState();
-}
-
-// ==================== 新鮮度 & 爛蕉機制 ====================
-function tickFreshness() {
-  if (state.stock <= 0) {
-    // 沒有庫存時新鮮度慢慢回升一點點
-    state.freshness = Math.min(100, state.freshness + 0.4);
-  } else {
-    // 有庫存就會下降，等級愈高下降愈慢
-    const decay = 1.15 - (state.level * 0.06);
-    state.freshness = Math.max(0, state.freshness - Math.max(0.35, decay));
-  }
-
-  // 新鮮度低於 35% 開始爛蕉
-  if (state.stock > 0 && state.freshness < 35) {
-    if (!spoilWarned) {
-      showToast("⚠️ 香蕉開始變壞了！快點賣掉或入新貨！");
-      spoilWarned = true;
-      checkAchievement("spoil");
-    }
-    // 每次 tick 有機會爛掉一些
-    if (Math.random() < 0.45) {
-      const loss = Math.min(state.stock, 3 + Math.floor(Math.random() * 6));
-      state.stock -= loss;
-      showFloat(`-${loss} 箱 壞掉了`, "#E74C3C");
-      if (state.stock === 0) spoilWarned = false;
-    }
-  } else {
-    spoilWarned = false;
-  }
-
-  updateUI();
-  saveState();
-}
-
-// ==================== 入貨 ====================
-function buyBananas() {
-  if (state.money < 800) {
-    showToast("資金不足！");
-    return;
-  }
-  state.money -= 800;
-  state.stock += 50;
-  // 入貨大幅回升新鮮度
-  state.freshness = Math.min(100, state.freshness + 45);
-  spoilWarned = false;
-
-  showFloat("+50 箱", "#2ECC71");
-  checkAchievement("first_buy");
-  if (state.money >= 10000) checkAchievement("rich_10k");
-  if (state.money >= 50000) checkAchievement("rich_50k");
-  updateUI();
-  saveState();
-}
-
-// ==================== 訂單 ====================
-function acceptOrder(idx) {
-  const order = activeOrders[idx];
-  if (!order) return;
-  if (state.stock < order.qty) {
-    showToast("庫存不足！快去入貨");
-    return;
-  }
-  state.stock -= order.qty;
-  state.money += order.pay;
-  state.totalProfit += order.pay - (order.qty * 11);
-  state.totalSold += order.qty;
-  addExp(Math.floor(order.qty / 4) + 8);
-
-  // 賣出也會稍微提升新鮮度（清走舊貨）
-  state.freshness = Math.min(100, state.freshness + 8);
-
-  showFloat("+" + formatMoney(order.pay), "#2ECC71");
-  showToast(`${order.icon} ${order.name} 滿意收貨！`);
-
-  checkAchievement("first_sell");
-  if (state.totalSold >= 500) checkAchievement("sold_500");
-  if (state.money >= 10000) checkAchievement("rich_10k");
-  if (state.money >= 50000) checkAchievement("rich_50k");
-
-  activeOrders.splice(idx, 1);
-  renderOrders();
-  updateUI();
-  saveState();
-}
-
-function rejectOrder(idx) {
-  const order = activeOrders[idx];
-  showToast(`${order.icon} ${order.name} 有啲失望…`);
-  activeOrders.splice(idx, 1);
-  renderOrders();
-}
-
-function renderOrders() {
-  const el = document.getElementById("orders");
-  if (activeOrders.length === 0) {
-    el.innerHTML = `<div class="empty-orders">暫時未有訂單，稍等一下…</div>`;
-    return;
-  }
-  el.innerHTML = activeOrders.map((o, i) => `
-    <div class="order-card">
-      <div class="order-info">
-        <div class="order-name">${o.icon} ${o.name}</div>
-        <div class="order-detail">需要 ${o.qty} 箱　·　出價 ${formatMoney(o.pay)}</div>
-      </div>
-      <div class="order-actions">
-        <button class="btn btn-primary" style="padding:9px 13px;font-size:0.88rem" onclick="acceptOrder(${i})">接單</button>
-        <button class="btn btn-secondary" style="padding:9px 13px;font-size:0.88rem" onclick="rejectOrder(${i})">拒絕</button>
+    <div id="ui-layer">
+      <div class="score-board">
+        <div class="label">而家高度</div>
+        <div class="value"><span id="scoreValue">0</span><span class="unit"> cm</span></div>
+        <div class="height-info" id="heightDesc">小販攤檔門口</div>
       </div>
     </div>
-  `).join("");
-}
 
-function spawnOrder() {
-  if (activeOrders.length >= 3) return;
-  const c = customers[Math.floor(Math.random() * customers.length)];
-  const qty = Math.floor(Math.random() * (c.maxQty - c.minQty + 1)) + c.minQty;
-  const basePay = qty * (13.5 + Math.random() * 7);
-  const pay = Math.floor(basePay * c.payMul * (1 + state.level * 0.035));
+    <div id="height-marker">↑ 越高越難 ↑</div>
 
-  activeOrders.push({
-    name: c.name,
-    icon: c.icon,
-    qty,
-    pay
-  });
-  renderOrders();
-  showToast(`${c.icon} ${c.name} 嚟落單喇！`);
-}
+    <div id="start-screen">
+      <h1>魚蛋接接樂</h1>
+      <div class="subtitle">用牙籤接住從天而降嘅魚蛋！</div>
+      <button class="btn" id="startBtn">開始遊戲</button>
+      <div class="howto">
+        <strong>玩法：</strong><br>
+        • 左右移動牙籤接住魚蛋<br>
+        • 每接一粒 +1cm<br>
+        • 魚蛋會越嚟越快<br>
+        • 漏接一粒就 GAME OVER<br>
+        • 高度會從攤檔 → 大樓 → 天空 → 太空
+      </div>
+    </div>
 
-// ==================== 隨機事件 ====================
-function randomEvent() {
-  if (Math.random() > 0.32) return;
-  const events = [
-    () => {
-      if (state.stock < 8) return;
-      const lost = Math.min(state.stock, 12 + Math.floor(Math.random() * 18));
-      const gain = lost * 26;
-      state.stock -= lost;
-      state.money += gain;
-      state.totalProfit += gain - lost * 11;
-      showToast(`🦍 大金剛突然嚟搶貨！失去 ${lost} 箱，但賺到 ${formatMoney(gain)}`);
-      checkAchievement("event");
-    },
-    () => {
-      const bonus = 280 + state.level * 70;
-      state.money += bonus;
-      showToast(`🍄 瑪利歐緊急訂單！額外獲得 ${formatMoney(bonus)}`);
-      checkAchievement("event");
-    },
-    () => {
-      if (state.money < 400) return;
-      const loss = Math.min(state.money, 350 + Math.floor(Math.random() * 500));
-      state.money -= loss;
-      showToast(`📉 蕉價突然崩盤…損失 ${formatMoney(loss)}`);
-      checkAchievement("event");
-    },
-    () => {
-      state.stock += 25;
-      state.freshness = Math.min(100, state.freshness + 20);
-      showToast(`🎁 神秘客戶送咗 25 箱新鮮香蕉！`);
-      checkAchievement("event");
+    <div id="gameover-screen" class="hidden">
+      <h2>魚蛋落地喇！</h2>
+      <div>你接咗</div>
+      <div class="final-score"><span id="finalScore">0</span> cm</div>
+      <div class="final-height" id="finalHeight">到達：小販攤檔</div>
+      <button class="btn" id="restartBtn">再嚟過</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+
+    const scoreValueEl = document.getElementById('scoreValue');
+    const heightDescEl = document.getElementById('heightDesc');
+    const startScreen = document.getElementById('start-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const finalScoreEl = document.getElementById('finalScore');
+    const finalHeightEl = document.getElementById('finalHeight');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let W, H;
+    let score = 0;
+    let gameRunning = false;
+    let gameOver = false;
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let baseSpawnInterval = 1.4;
+    let fishballs = [];
+    let particles = [];
+    let stickX = 0;
+    let stickTargetX = 0;
+    let isPointerDown = false;
+
+    const stages = [
+      { min: 0,   max: 15,  name: '小販攤檔門口', bg: 'street' },
+      { min: 15,  max: 40,  name: '摩天大樓之間', bg: 'city' },
+      { min: 40,  max: 80,  name: '高空雲層',     bg: 'sky' },
+      { min: 80,  max: 150, name: '接近太空',     bg: 'space' },
+      { min: 150, max: Infinity, name: '深空宇宙', bg: 'deepspace' }
+    ];
+
+    function getCurrentStage() {
+      return stages.find(s => score >= s.min && score < s.max) || stages[stages.length - 1];
     }
-  ];
-  events[Math.floor(Math.random() * events.length)]();
-  updateUI();
-  saveState();
-}
 
-// ==================== 呼叫大猩猩 ====================
-function playRoar() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(85, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(32, ctx.currentTime + 0.65);
-    gain.gain.setValueAtTime(0.26, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.65);
-  } catch(e) {}
-}
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      W = Math.floor(rect.width * (window.devicePixelRatio || 1));
+      H = Math.floor(rect.height * (window.devicePixelRatio || 1));
+      canvas.width = W;
+      canvas.height = H;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      stickX = W / 2;
+      stickTargetX = W / 2;
+    }
+    window.addEventListener('resize', resize);
+    resize();
 
-function bananaRain() {
-  for (let i = 0; i < 28; i++) {
-    setTimeout(() => {
-      const b = document.createElement("div");
-      b.className = "banana-rain";
-      b.textContent = "🍌";
-      b.style.left = Math.random() * 100 + "vw";
-      b.style.animationDuration = (1.7 + Math.random() * 2.1) + "s";
-      document.body.appendChild(b);
-      setTimeout(() => b.remove(), 4200);
-    }, i * 48);
-  }
-}
+    function getPointerX(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      return (clientX - rect.left) * (W / rect.width);
+    }
 
-function callGorilla() {
-  playRoar();
-  bananaRain();
-  const dk = document.getElementById("dk");
-  dk.classList.remove("crawl");
-  void dk.offsetWidth;
-  dk.classList.add("crawl");
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!gameRunning) return;
+      isPointerDown = true;
+      stickTargetX = getPointerX(e);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!gameRunning || !isPointerDown) return;
+      stickTargetX = getPointerX(e);
+    });
+    canvas.addEventListener('pointerup', () => { isPointerDown = false; });
+    canvas.addEventListener('pointerleave', () => { isPointerDown = false; });
 
-  state.gorillaCount = (state.gorillaCount || 0) + 1;
-  if (state.gorillaCount >= 5) checkAchievement("gorilla");
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (!gameRunning) return;
+      isPointerDown = true;
+      stickTargetX = getPointerX(e);
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!gameRunning) return;
+      stickTargetX = getPointerX(e);
+    }, { passive: false });
+    canvas.addEventListener('touchend', () => { isPointerDown = false; });
 
-  if (Math.random() < 0.28) {
-    state.stock += 8;
-    state.freshness = Math.min(100, state.freshness + 12);
-    showFloat("+8 箱", "#FFD93D");
-    showToast("🦍 大猩猩送咗 8 箱香蕉畀你！");
-  }
-  updateUI();
-  saveState();
-}
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+      if ((e.key === ' ' || e.key === 'Enter') && !gameRunning && !gameOver) startGame();
+      if ((e.key === ' ' || e.key === 'Enter') && gameOver) restartGame();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-// ==================== 其他 UI ====================
-function renderTicker() {
-  const el = document.getElementById("ticker");
-  el.innerHTML = "";
-  worlds.forEach((w, i) => {
-    const change = (Math.random() * 34 - 13).toFixed(1);
-    const isUp = change >= 0;
-    const price = (w.base * (1 + change / 100)).toFixed(1);
-    el.innerHTML += `
-      <div class="ticker-item">
-        <div class="world-name">${w.name}</div>
-        <div class="price" id="p${i}">$${price}</div>
-        <div class="change ${isUp ? "up" : "down"}" id="c${i}">${isUp ? "▲" : "▼"} ${Math.abs(change)}%</div>
-      </div>`;
-  });
-}
+    class Fishball {
+      constructor() {
+        this.r = Math.max(18, W * 0.045);
+        this.x = this.r + Math.random() * (W - this.r * 2);
+        this.y = -this.r - 10;
+        const speedFactor = 1 + score * 0.035;
+        this.vy = (H * 0.35 + Math.random() * H * 0.15) * speedFactor / 60;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotSpeed = (Math.random() - 0.5) * 0.12;
+        this.caught = false;
+        this.missed = false;
+      }
 
-function updatePrices() {
-  worlds.forEach((w, i) => {
-    const change = (Math.random() * 26 - 10).toFixed(1);
-    const isUp = change >= 0;
-    const price = (w.base * (1 + change / 100)).toFixed(1);
-    const pEl = document.getElementById("p" + i);
-    const cEl = document.getElementById("c" + i);
-    if (!pEl) return;
-    pEl.textContent = "$" + price;
-    cEl.className = "change " + (isUp ? "up" : "down");
-    cEl.innerHTML = (isUp ? "▲" : "▼") + " " + Math.abs(change) + "%";
-  });
-}
+      update(dt) {
+        this.y += this.vy * dt * 60;
+        this.rotation += this.rotSpeed;
+      }
 
-function renderBananas() {
-  const grid = document.getElementById("bananaGrid");
-  grid.innerHTML = "";
-  for (let i = 0; i < 6; i++) {
-    const b = document.createElement("div");
-    b.className = "banana";
-    b.textContent = "🍌";
-    b.onclick = () => showBanana(i);
-    grid.appendChild(b);
-  }
-}
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
 
-function showBanana(index) {
-  const data = bananaData[index];
-  document.getElementById("modalTitle").textContent = data.title;
-  document.getElementById("modalBody").innerHTML = data.lines.map(l => `<p>🍌 ${l}</p>`).join("");
-  document.getElementById("modal").classList.add("show");
-}
-function closeModal() {
-  document.getElementById("modal").classList.remove("show");
-}
-document.getElementById("modal").addEventListener("click", e => {
-  if (e.target.id === "modal") closeModal();
-});
+        ctx.beginPath();
+        ctx.ellipse(3, 4, this.r * 0.9, this.r * 0.7, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fill();
 
-function renderAchievements() {
-  const el = document.getElementById("achievements");
-  el.innerHTML = achievementsList.map(a => `
-    <div class="ach ${state.achievements[a.id] ? "unlocked" : ""}">
-      <div class="ach-icon">${a.icon}</div>
-      <div class="ach-name">${a.name}</div>
-      <div style="font-size:0.74rem;color:#888;margin-top:2px">${a.desc}</div>
-    </div>
-  `).join("");
-}
+        const grad = ctx.createRadialGradient(-this.r * 0.3, -this.r * 0.3, this.r * 0.1, 0, 0, this.r);
+        grad.addColorStop(0, '#ffe082');
+        grad.addColorStop(0.5, '#ffb74d');
+        grad.addColorStop(0.85, '#e65100');
+        grad.addColorStop(1, '#bf360c');
+        ctx.beginPath();
+        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
 
-function renderClients() {
-  const el = document.getElementById("clientGrid");
-  el.innerHTML = clientList.map(c => `
-    <div class="client-card">
-      <div class="name">${c.icon} ${c.name}</div>
-      <div class="role">${c.role}</div>
-      <div class="quote">${c.quote}</div>
-    </div>
-  `).join("");
-}
+        ctx.beginPath();
+        ctx.arc(-this.r * 0.28, -this.r * 0.28, this.r * 0.28, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,220,0.55)';
+        ctx.fill();
 
-// ==================== 初始化 ====================
-function init() {
-  renderTicker();
-  setInterval(updatePrices, 2700);
-  renderBananas();
-  renderAchievements();
-  renderClients();
-  updateUI();
-  renderOrders();
+        ctx.fillStyle = 'rgba(180,80,20,0.25)';
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 + 0.5;
+          const d = this.r * 0.45;
+          ctx.beginPath();
+          ctx.arc(Math.cos(a) * d, Math.sin(a) * d, this.r * 0.08, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
-  // 新鮮度每 2.2 秒 tick 一次
-  setInterval(tickFreshness, 2200);
+        ctx.restore();
+      }
+    }
 
-  // 訂單
-  setInterval(() => {
-    if (Math.random() < 0.58) spawnOrder();
-  }, 8500);
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 8;
+        this.vy = (Math.random() - 0.5) * 8 - 2;
+        this.life = 1;
+        this.decay = 0.025 + Math.random() * 0.02;
+        this.color = color;
+        this.size = 3 + Math.random() * 5;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.15;
+        this.life -= this.decay;
+      }
+      draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
 
-  // 隨機事件
-  setInterval(randomEvent, 26000);
+    function spawnFishball() {
+      fishballs.push(new Fishball());
+    }
 
-  setTimeout(spawnOrder, 2200);
-}
+    function createCatchParticles(x, y) {
+      const colors = ['#ffb74d', '#ffd54f', '#ffe082', '#ff8a65', '#fff59d'];
+      for (let i = 0; i < 12; i++) {
+        particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
+      }
+    }
 
-init();
-</script>
+    function drawStick() {
+      const stickY = H - H * 0.12;
+      const stickLen = H * 0.18;
+      const stickW = Math.max(4, W * 0.012);
+
+      stickX += (stickTargetX - stickX) * 0.28;
+
+      ctx.save();
+      ctx.translate(stickX, stickY);
+
+      const stickGrad = ctx.createLinearGradient(-stickW, 0, stickW, 0);
+      stickGrad.addColorStop(0, '#5d4037');
+      stickGrad.addColorStop(0.4, '#a1887f');
+      stickGrad.addColorStop(0.6, '#d7ccc8');
+      stickGrad.addColorStop(1, '#5d4037');
+
+      ctx.beginPath();
+      ctx.moveTo(-stickW / 2, 0);
+      ctx.lineTo(-stickW / 3, -stickLen);
+      ctx.lineTo(stickW / 3, -stickLen);
+      ctx.lineTo(stickW / 2, 0);
+      ctx.closePath();
+      ctx.fillStyle = stickGrad;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-stickW / 3, -stickLen);
+      ctx.lineTo(0, -stickLen - 12);
+      ctx.lineTo(stickW / 3, -stickLen);
+      ctx.closePath();
+      ctx.fillStyle = '#8d6e63';
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(-stickW * 0.6, -8, stickW * 1.2, 14);
+
+      ctx.restore();
+
+      return { x: stickX, y: stickY - stickLen - 6, r: 18 };
+    }
+
+    function drawBackground(stage) {
+      const t = Math.min(1, (score - stage.min) / Math.max(1, stage.max - stage.min));
+
+      if (stage.bg === 'street') {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#3e2723');
+        g.addColorStop(0.4, '#5d4037');
+        g.addColorStop(0.7, '#795548');
+        g.addColorStop(1, '#4e342e');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+        ctx.fillStyle = '#c62828';
+        ctx.beginPath();
+        ctx.moveTo(0, H * 0.55);
+        for (let i = 0; i <= 8; i++) {
+          const x = (i / 8) * W;
+          const y = H * 0.55 + (i % 2 === 0 ? 18 : 0);
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(W, H * 0.7);
+        ctx.lineTo(0, H * 0.7);
+        ctx.closePath();
+        ctx.fill();
+
+        for (let i = 0; i < 5; i++) {
+          const lx = W * (0.15 + i * 0.18);
+          ctx.beginPath();
+          ctx.arc(lx, H * 0.58, 8, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 200, 50, 0.7)';
+          ctx.fill();
+        }
+      } else if (stage.bg === 'city') {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#0d1b2a');
+        g.addColorStop(0.5, '#1b263b');
+        g.addColorStop(1, '#415a77');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+
+        const buildings = [
+          [0.05, 0.45, 0.12], [0.18, 0.35, 0.1], [0.3, 0.5, 0.14],
+          [0.46, 0.28, 0.11], [0.6, 0.42, 0.13], [0.75, 0.33, 0.1], [0.88, 0.48, 0.12]
+        ];
+        buildings.forEach(([bx, bh, bw]) => {
+          const x = bx * W;
+          const h = bh * H;
+          const w = bw * W;
+          ctx.fillStyle = `rgba(20, 30, 50, ${0.7 + t * 0.2})`;
+          ctx.fillRect(x, H - h, w, h);
+          ctx.fillStyle = 'rgba(255, 220, 100, 0.35)';
+          for (let wy = H - h + 12; wy < H - 20; wy += 18) {
+            for (let wx = x + 6; wx < x + w - 6; wx += 14) {
+              if (Math.random() > 0.3) ctx.fillRect(wx, wy, 7, 9);
+            }
+          }
+        });
+      } else if (stage.bg === 'sky') {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#0a1628');
+        g.addColorStop(0.4, '#1a3a6e');
+        g.addColorStop(0.8, '#4a90c4');
+        g.addColorStop(1, '#87ceeb');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        drawCloud(W * 0.2, H * 0.3, 60);
+        drawCloud(W * 0.7, H * 0.2, 80);
+        drawCloud(W * 0.5, H * 0.55, 50);
+      } else if (stage.bg === 'space' || stage.bg === 'deepspace') {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#000008');
+        g.addColorStop(0.5, '#050520');
+        g.addColorStop(1, '#0a0a30');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = '#fff';
+        for (let i = 0; i < 80; i++) {
+          const sx = (i * 97 % W);
+          const sy = (i * 53 % H);
+          const size = (i % 3 === 0) ? 1.5 : 0.8;
+          ctx.globalAlpha = 0.4 + (i % 5) * 0.12;
+          ctx.beginPath();
+          ctx.arc(sx, sy, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        if (stage.bg === 'deepspace') {
+          const neb = ctx.createRadialGradient(W * 0.7, H * 0.3, 10, W * 0.7, H * 0.3, W * 0.4);
+          neb.addColorStop(0, 'rgba(120, 40, 180, 0.25)');
+          neb.addColorStop(1, 'transparent');
+          ctx.fillStyle = neb;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+    }
+
+    function drawCloud(x, y, s) {
+      ctx.beginPath();
+      ctx.arc(x, y, s * 0.5, 0, Math.PI * 2);
+      ctx.arc(x + s * 0.4, y - s * 0.15, s * 0.4, 0, Math.PI * 2);
+      ctx.arc(x + s * 0.7, y + s * 0.05, s * 0.35, 0, Math.PI * 2);
+      ctx.arc(x - s * 0.3, y + s * 0.1, s * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function checkCollision(ball, tip) {
+      const dx = ball.x - tip.x;
+      const dy = ball.y - tip.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return dist < ball.r + tip.r * 0.7;
+    }
+
+    function update(dt) {
+      if (!gameRunning) return;
+
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        stickTargetX = Math.max(30, stickTargetX - W * 0.025);
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        stickTargetX = Math.min(W - 30, stickTargetX + W * 0.025);
+      }
+
+      spawnTimer += dt;
+      const interval = Math.max(0.45, baseSpawnInterval - score * 0.012);
+      if (spawnTimer >= interval) {
+        spawnTimer = 0;
+        spawnFishball();
+      }
+
+      const tip = { x: stickX, y: H - H * 0.12 - H * 0.18 - 6, r: 18 };
+
+      for (let i = fishballs.length - 1; i >= 0; i--) {
+        const b = fishballs[i];
+        b.update(dt);
+
+        if (checkCollision(b, tip)) {
+          score += 1;
+          createCatchParticles(b.x, b.y);
+          fishballs.splice(i, 1);
+          updateUI();
+          continue;
+        }
+
+        if (b.y - b.r > H) {
+          endGame();
+          return;
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function updateUI() {
+      scoreValueEl.textContent = score;
+      const stage = getCurrentStage();
+      heightDescEl.textContent = stage.name;
+    }
+
+    function draw() {
+      const stage = getCurrentStage();
+      drawBackground(stage);
+
+      fishballs.forEach(b => b.draw(ctx));
+      particles.forEach(p => p.draw(ctx));
+      drawStick();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, H - H * 0.08);
+      ctx.lineTo(W, H - H * 0.08);
+      ctx.stroke();
+    }
+
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+      lastTime = timestamp;
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      score = 0;
+      fishballs = [];
+      particles = [];
+      spawnTimer = 0;
+      gameRunning = true;
+      gameOver = false;
+      stickX = W / 2;
+      stickTargetX = W / 2;
+      updateUI();
+      startScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+    }
+
+    function endGame() {
+      gameRunning = false;
+      gameOver = true;
+      finalScoreEl.textContent = score;
+      finalHeightEl.textContent = '到達：' + getCurrentStage().name;
+      gameoverScreen.classList.remove('hidden');
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', restartGame);
+
+    requestAnimationFrame(gameLoop);
+  </script>
 </body>
 </html>
