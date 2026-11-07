@@ -1,28 +1,557 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>Bello</title>
-  <style>
-    body { background: #fef08a; text-align: center; padding-top: 100px; font-family: sans-serif; }
-    button { padding: 20px 40px; font-size: 2rem; background: #fde047; border: 3px solid #ca8a04; border-radius: 50px; cursor: pointer; }
-    .banana { position: absolute; top: -50px; font-size: 2rem; animation: fall 2s linear forwards; }
-    @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>香蕉批發大王｜全球蕉易所</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+
+  :root {
+    --banana: #FFD93D;
+    --banana-dark: #F4C430;
+    --green: #2ECC71;
+    --red: #E74C3C;
+    --dark: #1a1a1a;
+    --card: #2a2a2a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d1b00 50%, #1a1a1a 100%);
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 香蕉雨 */
+  .banana-rain {
+    position: fixed;
+    top: -50px;
+    font-size: 28px;
+    pointer-events: none;
+    z-index: 9999;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 30px 20px 10px;
+    position: relative;
+  }
+  h1 {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 900;
+    background: linear-gradient(90deg, #FFD93D, #FF9F1C, #FFD93D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(255, 217, 61, 0.4);
+  }
+  .subtitle {
+    color: #aaa;
+    margin-top: 8px;
+    font-size: 1.1rem;
+  }
+
+  /* 全球蕉易所 */
+  .exchange {
+    max-width: 900px;
+    margin: 30px auto;
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    border: 2px solid #444;
+    box-shadow: 0 0 40px rgba(255, 217, 61, 0.15);
+  }
+  .exchange h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: var(--banana);
+    font-size: 1.5rem;
+  }
+  .ticker {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px 15px;
+    font-size: 0.95rem;
+  }
+  .ticker-item {
+    display: contents;
+  }
+  .world-name { color: #ddd; }
+  .price {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    min-width: 80px;
+    text-align: right;
+  }
+  .change {
+    font-weight: 700;
+    min-width: 70px;
+    text-align: right;
+  }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .flash-up { animation: flashGreen 0.4s; }
+  .flash-down { animation: flashRed 0.4s; }
+  @keyframes flashGreen { 50% { background: rgba(46, 204, 113, 0.3); } }
+  @keyframes flashRed { 50% { background: rgba(231, 76, 60, 0.3); } }
+
+  /* 呼叫大猩猩 */
+  .gorilla-zone {
+    text-align: center;
+    margin: 40px 20px;
+  }
+  #callGorilla {
+    background: linear-gradient(135deg, #FF9F1C, #FFD93D);
+    border: none;
+    padding: 18px 40px;
+    font-size: 1.3rem;
+    font-weight: 900;
+    border-radius: 50px;
+    cursor: pointer;
+    color: #1a1a1a;
+    box-shadow: 0 8px 25px rgba(255, 159, 28, 0.5);
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  #callGorilla:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 35px rgba(255, 159, 28, 0.7);
+  }
+  #callGorilla:active { transform: scale(0.97); }
+
+  /* 大金剛爬過 */
+  #dk {
+    position: fixed;
+    bottom: -20px;
+    left: -150px;
+    font-size: 80px;
+    z-index: 100;
+    transition: left 3s linear;
+    pointer-events: none;
+    filter: drop-shadow(0 0 10px #000);
+  }
+  #dk.crawl { left: 110vw; }
+
+  /* 香蕉品質檢驗器 */
+  .inspector {
+    max-width: 800px;
+    margin: 40px auto;
+    text-align: center;
+    padding: 0 20px;
+  }
+  .inspector h2 {
+    color: var(--banana);
+    margin-bottom: 20px;
+  }
+  .banana-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+  }
+  .banana {
+    font-size: 60px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    user-select: none;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+  }
+  .banana:hover { transform: scale(1.2) rotate(-8deg); }
+  .banana:active { transform: scale(0.9); }
+
+  /* 彈出視窗 */
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .modal.show { display: flex; }
+  .modal-content {
+    background: #2a2a2a;
+    border: 3px solid var(--banana);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal-content h3 {
+    color: var(--banana);
+    margin-bottom: 15px;
+    font-size: 1.4rem;
+  }
+  .modal-content p {
+    margin: 8px 0;
+    font-size: 1.05rem;
+    line-height: 1.5;
+  }
+  .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  /* 客戶名單 */
+  .clients {
+    max-width: 900px;
+    margin: 50px auto 80px;
+    padding: 0 20px;
+  }
+  .clients h2 {
+    text-align: center;
+    color: var(--banana);
+    margin-bottom: 25px;
+  }
+  .client-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  .client-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 22px;
+    border: 1px solid #444;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .client-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--banana);
+  }
+  .client-card .name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--banana);
+    margin-bottom: 8px;
+  }
+  .client-card .role {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 12px;
+  }
+  .client-card .quote {
+    font-style: italic;
+    color: #ccc;
+    line-height: 1.5;
+  }
+
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  /* 音效提示 */
+  .sound-hint {
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 10px;
+  }
+</style>
 </head>
 <body>
-  <button onclick="rain()">Bello!</button>
-  <script>
-    function rain() {
-      for(let i=0; i<20; i++) {
-        let b = document.createElement('div');
-        b.className = 'banana';
-        b.innerText = '🍌';
-        b.style.left = Math.random() * window.innerWidth + 'px';
-        document.body.appendChild(b);
-        setTimeout(() => b.remove(), 2000);
+
+<header>
+  <h1>🍌 香蕉批發大王</h1>
+  <p class="subtitle">把香蕉賣向全世界遊戲宇宙的地下霸主</p>
+</header>
+
+<!-- 全球蕉易所 -->
+<section class="exchange">
+  <h2>📈 全球蕉易所 · 即時行情</h2>
+  <div class="ticker" id="ticker">
+    <!-- JS 動態生成 -->
+  </div>
+</section>
+
+<!-- 呼叫大猩猩 -->
+<div class="gorilla-zone">
+  <button id="callGorilla">🦍 一鍵呼叫大猩猩！</button>
+  <p class="sound-hint">（請打開聲音以獲得完整體驗）</p>
+</div>
+
+<!-- 大金剛 -->
+<div id="dk">🦍</div>
+
+<!-- 香蕉品質檢驗器 -->
+<section class="inspector">
+  <h2>🔍 香蕉品質檢驗器</h2>
+  <p style="color:#aaa; margin-bottom:20px;">點擊香蕉查看搞笑履歷</p>
+  <div class="banana-grid" id="bananaGrid">
+    <!-- JS 生成多根香蕉 -->
+  </div>
+</section>
+
+<!-- 彈出視窗 -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3 id="modalTitle">香蕉履歷</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- 客戶名單 -->
+<section class="clients">
+  <h2>👑 世界霸權客戶名單</h2>
+  <div class="client-grid">
+    <div class="client-card">
+      <div class="name">瑪利歐 (Mario)</div>
+      <div class="role">戰略物資部部長</div>
+      <div class="quote">「用來砸庫巴的戰略物資，每年固定採購 50 噸。品質穩定，砸下去很有手感。」</div>
+    </div>
+    <div class="client-card">
+      <div class="name">大金剛 (Donkey Kong)</div>
+      <div class="role">終身 VIP 大客戶</div>
+      <div class="quote">「買斷全球八成產量。誰敢跟我搶香蕉，我就把他從樹頂扔下去。」</div>
+    </div>
+    <div class="client-card">
+      <div class="name">小小兵 (Minions)</div>
+      <div class="role">瘋狂下單部隊</div>
+      <div class="quote">「BANANA!!! BANANA!!! BANANA!!! （已下單 9999 箱）」</div>
+    </div>
+    <div class="client-card">
+      <div class="name">奇諾比奧 (Toad)</div>
+      <div class="role">蘑菇王國採購官</div>
+      <div class="quote">「馬房最近需求暴增，請務必優先出貨給我們！急！非常急！」</div>
+    </div>
+    <div class="client-card">
+      <div class="name">林克 (Link)</div>
+      <div class="role">海拉魯補給官</div>
+      <div class="quote">「烤香蕉加蜂蜜是恢復體力的神器。上次在森林裡差點被吃掉，靠你的香蕉活了下來。」</div>
+    </div>
+    <div class="client-card">
+      <div class="name">皮卡丘</div>
+      <div class="role">電系吉祥物</div>
+      <div class="quote">「皮卡皮卡～（翻譯：這批香蕉很甜，下次再多送一箱給我）」</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © 2025 香蕉批發大王帝國 · 把香蕉賣到每個遊戲世界
+</footer>
+
+<script>
+  // ========== 全球蕉易所 ==========
+  const worlds = [
+    { name: "《薩爾達傳說》馬房", base: 128 },
+    { name: "《Super Mario》奇諾比奧", base: 95 },
+    { name: "《大金剛》香蕉島", base: 210 },
+    { name: "《神魔之塔》召喚師", base: 67 },
+    { name: "《原神》提瓦特", base: 88 },
+    { name: "《Minecraft》村民交易所", base: 42 },
+    { name: "《寶可夢》道館補給站", base: 73 },
+    { name: "《動物森友會》小島", base: 55 }
+  ];
+
+  const tickerEl = document.getElementById('ticker');
+
+  function renderTicker() {
+    tickerEl.innerHTML = '';
+    worlds.forEach((w, i) => {
+      const change = (Math.random() * 40 - 15).toFixed(1);
+      const isUp = change >= 0;
+      const price = (w.base * (1 + change / 100)).toFixed(1);
+
+      const item = document.createElement('div');
+      item.className = 'ticker-item';
+      item.innerHTML = `
+        <div class="world-name">${w.name}</div>
+        <div class="price" id="price-${i}">$${price}</div>
+        <div class="change ${isUp ? 'up' : 'down'}" id="change-${i}">
+          ${isUp ? '▲' : '▼'} ${Math.abs(change)}%
+        </div>
+      `;
+      tickerEl.appendChild(item);
+    });
+  }
+
+  function updatePrices() {
+    worlds.forEach((w, i) => {
+      const change = (Math.random() * 30 - 12).toFixed(1);
+      const isUp = change >= 0;
+      const price = (w.base * (1 + change / 100)).toFixed(1);
+
+      const priceEl = document.getElementById(`price-${i}`);
+      const changeEl = document.getElementById(`change-${i}`);
+
+      if (priceEl && changeEl) {
+        priceEl.textContent = `$${price}`;
+        changeEl.className = `change ${isUp ? 'up' : 'down'}`;
+        changeEl.innerHTML = `${isUp ? '▲' : '▼'} ${Math.abs(change)}%`;
+
+        // 閃爍效果
+        priceEl.parentElement.classList.add(isUp ? 'flash-up' : 'flash-down');
+        setTimeout(() => {
+          priceEl.parentElement.classList.remove('flash-up', 'flash-down');
+        }, 400);
       }
+    });
+  }
+
+  renderTicker();
+  setInterval(updatePrices, 2800);
+
+  // ========== 呼叫大猩猩 ==========
+  const callBtn = document.getElementById('callGorilla');
+  const dk = document.getElementById('dk');
+
+  // 簡單的吼叫音效（用 Web Audio 合成，不需要外部檔案）
+  function playRoar() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(80, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.8);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.8);
+    } catch(e) {}
+  }
+
+  function bananaRain() {
+    for (let i = 0; i < 35; i++) {
+      setTimeout(() => {
+        const b = document.createElement('div');
+        b.className = 'banana-rain';
+        b.textContent = '🍌';
+        b.style.left = Math.random() * 100 + 'vw';
+        b.style.animationDuration = (2 + Math.random() * 2.5) + 's';
+        document.body.appendChild(b);
+        setTimeout(() => b.remove(), 5000);
+      }, i * 60);
     }
-  </script>
+  }
+
+  callBtn.addEventListener('click', () => {
+    playRoar();
+    bananaRain();
+
+    // 大金剛爬過
+    dk.classList.remove('crawl');
+    void dk.offsetWidth; // 強制重繪
+    dk.classList.add('crawl');
+  });
+
+  // ========== 香蕉品質檢驗器 ==========
+  const bananaData = [
+    {
+      title: "特級戰略香蕉",
+      lines: [
+        "產地：熱帶雨林深處",
+        "甜度：100%（官方認證）",
+        "用途：適合砸在敵人臉上",
+        "耐久度：可連續砸 7 次庫巴",
+        "評價：瑪利歐五星推薦"
+      ]
+    },
+    {
+      title: "大金剛專用巨蕉",
+      lines: [
+        "產地：香蕉島頂級果園",
+        "重量：單根可當武器",
+        "甜度：甜到能讓猩猩跳舞",
+        "庫存狀態：已被大金剛預約 80%",
+        "注意：請勿挑戰牠的所有權"
+      ]
+    },
+    {
+      title: "小小兵瘋狂蕉",
+      lines: [
+        "產地：不明（可能是實驗室）",
+        "特色：會自己發出「BANANA!」叫聲",
+        "甜度：超過人類理解範圍",
+        "訂購量：已售出 9999 箱",
+        "副作用：會讓人突然想穿黃色連身衣"
+      ]
+    },
+    {
+      title: "海拉魯恢復蕉",
+      lines: [
+        "產地：科洛克森林附近",
+        "效果：烤過後恢復 3 顆心",
+        "甜度：加蜂蜜後更神",
+        "林克評價：「差點被吃掉時靠它活下來」",
+        "保存方式：請放在希卡石板裡"
+      ]
+    },
+    {
+      title: "神秘發光蕉",
+      lines: [
+        "產地：？？？（可能來自異世界）",
+        "特殊能力：夜晚會微微發光",
+        "甜度：吃了會做奇怪的夢",
+        "風險等級：中等（可能吸引寶可夢）",
+        "研究員筆記：還在觀察中..."
+      ]
+    },
+    {
+      title: "村民交易蕉",
+      lines: [
+        "產地：Minecraft 平原村莊",
+        "交易價格：1 個綠寶石 = 8 根",
+        "甜度：普通但很耐放",
+        "村民好感度：+2",
+        "注意：鐵巨人好像也喜歡"
+      ]
+    }
+  ];
+
+  const grid = document.getElementById('bananaGrid');
+  for (let i = 0; i < 6; i++) {
+    const b = document.createElement('div');
+    b.className = 'banana';
+    b.textContent = '🍌';
+    b.onclick = () => showBanana(i);
+    grid.appendChild(b);
+  }
+
+  function showBanana(index) {
+    const data = bananaData[index];
+    document.getElementById('modalTitle').textContent = data.title;
+    document.getElementById('modalBody').innerHTML = data.lines.map(l => `<p>🍌 ${l}</p>`).join('');
+    document.getElementById('modal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('show');
+  }
+
+  // 點擊背景關閉
+  document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') closeModal();
+  });
+</script>
 </body>
 </html>
