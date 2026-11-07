@@ -44,6 +44,8 @@
     .hud-chip.combo { border-color:rgba(255,80,80,0.5); color:#ff8a80; }
     .hud-chip.best { border-color:rgba(255,215,0,0.4); color:#ffe082; }
     .hud-chip.fx { border-color:rgba(100,200,255,0.4); color:#81d4fa; }
+    .hud-chip.mission { border-color:rgba(120,255,180,0.45); color:#9ef2b0; }
+    .hud-chip.goal { border-color:rgba(128,222,234,0.45); color:#80deea; }
     #float-text {
       position:absolute; left:50%; top:40%; transform:translate(-50%,-50%);
       font-size:28px; font-weight:900; color:#fff; pointer-events:none;
@@ -92,6 +94,8 @@
         <div class="hud-chip combo" id="comboChip">連擊 x0</div>
         <div class="hud-chip best" id="bestChip">最高 0</div>
         <div class="hud-chip fx" id="fxChip" style="display:none">效果</div>
+        <div class="hud-chip mission" id="missionChip">任務：0/5</div>
+        <div class="hud-chip goal" id="goalChip">倍數 x1</div>
       </div>
     </div>
     <div id="float-text"></div>
@@ -104,7 +108,7 @@
         <strong>玩法：</strong><br>
         • 左右移動牙籤串魚蛋，牙籤會向後伸長<br>
         • 連續串中有 Combo 加成<br>
-        • 特殊魚蛋：金(+3)／辣(加速)／凍(慢鏡)／炸(扣分)<br>
+        • 特殊魚蛋：金(+3)／辣(加速)／凍(慢鏡)／彩虹(x2 4秒)／炸(扣分)<br>
         • 正中尖端有「完美」額外分<br>
         • 漏接一粒就 GAME OVER
       </div>
@@ -129,6 +133,8 @@
     const comboChip = document.getElementById('comboChip');
     const bestChip = document.getElementById('bestChip');
     const fxChip = document.getElementById('fxChip');
+    const missionChip = document.getElementById('missionChip');
+    const goalChip = document.getElementById('goalChip');
     const floatText = document.getElementById('float-text');
     const startScreen = document.getElementById('start-screen');
     const gameoverScreen = document.getElementById('gameover-screen');
@@ -156,6 +162,10 @@
     let combo = 0;
     let maxCombo = 0;
     let bestScore = 0;
+    let scoreBoostTimer = 0;
+    let missionIndex = 0;
+    let missionProgress = 0;
+    const missionGoals = [5, 10, 20, 35, 50];
     try { bestScore = parseInt(localStorage.getItem('fishball_best') || '0', 10) || 0; } catch (e) {}
     bestChip.textContent = '最高 ' + bestScore;
     startBest.textContent = '最高紀錄：' + bestScore + ' cm';
@@ -180,11 +190,12 @@
     ];
 
     const BALL_TYPES = {
-      normal: { name: '普通', weight: 70 },
-      gold: { name: '金色', weight: 8, points: 3 },
+      normal: { name: '普通', weight: 64 },
+      gold: { name: '金色', weight: 9, points: 3 },
       spicy: { name: '辣', weight: 8 },
       frozen: { name: '凍', weight: 8 },
-      bomb: { name: '炸彈', weight: 6 }
+      rainbow: { name: '彩虹', weight: 6 },
+      bomb: { name: '炸彈', weight: 5 }
     };
 
     function getStageIndexByScore(s) {
@@ -194,6 +205,18 @@
       return stages.length - 1;
     }
     function getCurrentStage() { return stages[currentStageIndex] || stages[0]; }
+
+    function updateMissionUI() {
+      const missionTarget = missionGoals[Math.min(missionIndex, missionGoals.length - 1)];
+      const shownValue = Math.min(missionProgress, missionTarget);
+      missionChip.textContent = '任務：' + shownValue + '/' + missionTarget;
+      if (missionProgress >= missionTarget && missionIndex < missionGoals.length - 1) {
+        missionIndex += 1;
+        scoreBoostTimer = Math.max(scoreBoostTimer, 3);
+        showFloat('任務達成！', '#a5d6a7');
+      }
+      goalChip.textContent = scoreBoostTimer > 0 ? '倍數 x2' : '倍數 x1';
+    }
 
     function getBallRadius() {
       const base = Math.max(18, W * 0.048);
@@ -325,6 +348,7 @@
         pool.push(['gold', 9]);
         pool.push(['spicy', 7]);
         pool.push(['frozen', 7]);
+        pool.push(['rainbow', 5]);
         pool.push(['bomb', 5]);
       } else {
         pool.push(['gold', 5]);
@@ -392,6 +416,8 @@
         c0 = '#ffebee'; c1 = '#ff8a80'; c2 = '#ff5252'; c3 = '#ff1744'; c4 = '#d50000'; c5 = '#b71c1c';
       } else if (this.type === 'frozen') {
         c0 = '#e3f2fd'; c1 = '#81d4fa'; c2 = '#4fc3f7'; c3 = '#29b6f6'; c4 = '#0288d1'; c5 = '#01579b';
+      } else if (this.type === 'rainbow') {
+        c0 = '#ffffff'; c1 = '#ffeb3b'; c2 = '#ff6d00'; c3 = '#ff4081'; c4 = '#40c4ff'; c5 = '#00e676';
       } else if (this.type === 'bomb') {
         c0 = '#eceff1'; c1 = '#90a4ae'; c2 = '#546e7a'; c3 = '#37474f'; c4 = '#263238'; c5 = '#102027';
       }
@@ -408,8 +434,11 @@
         ctx.strokeStyle = 'rgba(255,215,0,0.7)';
         ctx.lineWidth = Math.max(2, r * 0.08);
         ctx.stroke();
+      } else if (this.type === 'rainbow') {
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = Math.max(2, r * 0.08);
+        ctx.stroke();
       } else if (this.type === 'bomb') {
-        // fuse dot
         ctx.beginPath();
         ctx.arc(0, -r * 0.75, r * 0.12, 0, Math.PI * 2);
         ctx.fillStyle = '#ff5722';
@@ -455,6 +484,7 @@
       if (type === 'gold') colors = ['#ffe082', '#ffd740', '#fff59d', '#ffc400'];
       if (type === 'spicy') colors = ['#ff5252', '#ff8a80', '#ff1744'];
       if (type === 'frozen') colors = ['#4fc3f7', '#81d4fa', '#e1f5fe'];
+      if (type === 'rainbow') colors = ['#ffeb3b', '#ff6d00', '#40c4ff', '#00e676', '#ff4081'];
       if (type === 'bomb') colors = ['#ff5722', '#ff9800', '#37474f'];
       for (let i = 0; i < 12; i++) particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
     }
@@ -644,7 +674,6 @@
 
     function skewerBall(ball, perfect) {
       if (ball.type === 'bomb') {
-        // bomb: break combo, lose 2 points (min 0), no stack
         combo = 0;
         score = Math.max(0, score - 2);
         createCatchParticles(ball.x, ball.y, 'bomb');
@@ -662,13 +691,21 @@
       stackedBalls.push(stacked);
       createCatchParticles(ball.x, ball.y, ball.type);
 
+      missionProgress += 1;
+      if (ball.type === 'rainbow') {
+        scoreBoostTimer = Math.max(scoreBoostTimer, 4.5);
+        showFloat('彩虹 x2', '#80deea');
+      }
+
       combo += 1;
       if (combo > maxCombo) maxCombo = combo;
       const mult = getComboMult();
       let gain = 1;
       if (ball.type === 'gold') gain = 3;
+      if (ball.type === 'rainbow') gain = 4;
       if (perfect) gain += 1;
-      gain = Math.round(gain * mult);
+      const boostMultiplier = scoreBoostTimer > 0 ? 2 : 1;
+      gain = Math.round(gain * mult * boostMultiplier);
       score += gain;
 
       if (ball.type === 'spicy') {
@@ -679,6 +716,8 @@
         showFloat('凍！慢鏡', '#4fc3f7');
       } else if (ball.type === 'gold') {
         showFloat('金色 +' + gain, '#ffd740');
+      } else if (ball.type === 'rainbow') {
+        showFloat('彩虹 x2 +' + gain, '#80deea');
       } else if (perfect) {
         showFloat('完美 +' + gain, '#fff59d');
       } else if (combo >= 5 && combo % 5 === 0) {
@@ -728,9 +767,9 @@
     function update(dt) {
       if (!gameRunning) return;
 
-      // effects
       if (slowMoTimer > 0) slowMoTimer -= dt;
       if (speedUpTimer > 0) speedUpTimer -= dt;
+      if (scoreBoostTimer > 0) scoreBoostTimer = Math.max(0, scoreBoostTimer - dt);
       if (floatTimer > 0) {
         floatTimer -= dt;
         if (floatTimer <= 0) floatText.style.opacity = '0';
@@ -740,7 +779,6 @@
       if (slowMoTimer > 0) timeScale *= 0.55;
       if (speedUpTimer > 0) timeScale *= 1.35;
 
-      // fx chip
       if (slowMoTimer > 0) {
         fxChip.style.display = '';
         fxChip.textContent = '慢鏡 ' + slowMoTimer.toFixed(1) + 's';
@@ -765,10 +803,8 @@
       if (spawnTimer >= interval) { spawnTimer = 0; spawnFishball(); }
 
       const geo = getStickGeometry();
-      // drawStick updates stickX
       const tip = { tipX: stickX, tipY: geo.tipY - 8, r: 22 };
 
-      // soft follow for tip X used in collision (stickX updated in draw, so update here too)
       const follow = getMoveSpeed();
       stickX += (stickTargetX - stickX) * follow;
       stickX = Math.max(30, Math.min(W - 30, stickX));
@@ -807,6 +843,7 @@
         bestChip.textContent = '最高 ' + bestScore;
         try { localStorage.setItem('fishball_best', String(bestScore)); } catch (e) {}
       }
+      updateMissionUI();
     }
 
     function draw() {
@@ -829,7 +866,7 @@
 
     function startGame() {
       ensureAudio();
-      score = 0; combo = 0; maxCombo = 0;
+      score = 0; combo = 0; maxCombo = 0; missionIndex = 0; missionProgress = 0; scoreBoostTimer = 0;
       fallingBalls = []; stackedBalls = []; particles = [];
       spawnTimer = 0; gameRunning = true; gameOver = false;
       currentStageIndex = 0; transition.active = false;
@@ -868,6 +905,7 @@
       resize();
       requestAnimationFrame(function () {
         resize();
+        updateUI();
         requestAnimationFrame(gameLoop);
       });
     }
