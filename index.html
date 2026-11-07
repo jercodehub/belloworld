@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="html lang="zh-HK">
+<html lang="zh-HK">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -140,7 +140,7 @@
     let gameOver = false;
     let lastTime = 0;
     let spawnTimer = 0;
-    let baseSpawnInterval = 1.5;
+    let baseSpawnInterval = 1.7;
     let fallingBalls = [];
     let stackedBalls = [];
     let particles = [];
@@ -244,6 +244,7 @@
     });
     window.addEventListener('keyup', function(e) { keys[e.key] = false; });
 
+    // ---- Fishball ----
     function Fishball(isStacked) {
       this.baseR = getBallRadius();
       this.x = 0;
@@ -259,7 +260,7 @@
         this.x = this.baseR + Math.random() * (W - this.baseR * 2);
         this.y = -this.baseR - 30;
         const speedFactor = 1 + score * 0.025;
-        this.vy = (H * 0.28 + Math.random() * H * 0.12) * speedFactor / 60;
+        this.vy = (H * 0.22 + Math.random() * H * 0.10) * speedFactor / 60;
       }
     }
     Fishball.prototype.update = function(dt) {
@@ -277,11 +278,13 @@
       if (this.isStacked) ctx.rotate(Math.sin(this.wobble) * 0.05);
       else ctx.rotate(this.rotation);
 
+      // shadow
       ctx.beginPath();
       ctx.ellipse(r * 0.1, r * 0.2, r * 0.9, r * 0.7, 0, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.fill();
 
+      // body
       const body = ctx.createRadialGradient(-r * 0.25, -r * 0.3, r * 0.05, 0, 0, r);
       body.addColorStop(0, '#fff8e1');
       body.addColorStop(0.22, '#ffe9b0');
@@ -300,6 +303,7 @@
       ctx.lineWidth = Math.max(1, r * 0.05);
       ctx.stroke();
 
+      // highlights
       ctx.beginPath();
       ctx.ellipse(-r * 0.3, -r * 0.32, r * 0.34, r * 0.26, -0.5, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,245,0.55)';
@@ -309,6 +313,7 @@
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.fill();
 
+      // texture
       for (let i = 0; i < 7; i++) {
         const a = (i / 7) * Math.PI * 2 + this.texSeed;
         const d = r * (0.3 + (i % 3) * 0.1);
@@ -328,6 +333,7 @@
       ctx.restore();
     };
 
+    // ---- Particle ----
     function Particle(x, y, color) {
       this.x = x; this.y = y;
       this.vx = (Math.random() - 0.5) * 7;
@@ -357,12 +363,18 @@
       }
     }
 
+    // ---- Stick ----
     function getStickGeometry() {
-      const baseY = H - H * 0.08;
       const ballR = getBallRadius();
-      const stickLen = H * 0.16 + stackedBalls.length * ballR * 1.75;
-      const tipY = baseY - stickLen;
-      return { baseY: baseY, stickLen: stickLen, tipY: tipY, stickW: Math.max(5, W * 0.012), ballR: ballR };
+      const stickW = Math.max(5, W * 0.012);
+      // 尖端固定喺螢幕下方舒服位置，串得越多牙籤向後（向下）伸長
+      const tipY = H * 0.62;
+      const stackLen = stackedBalls.length * ballR * 1.7;
+      const minShaft = H * 0.12;
+      const stickLen = minShaft + stackLen;
+      // base 可以伸出畫面底部
+      const baseY = tipY + stickLen;
+      return { baseY: baseY, stickLen: stickLen, tipY: tipY, stickW: stickW, ballR: ballR };
     }
 
     function drawStick() {
@@ -401,6 +413,7 @@
       return { tipX: stickX, tipY: geo.tipY - 10, r: 18 };
     }
 
+    // ---- Backgrounds ----
     function drawStall(alpha) {
       if (alpha === undefined) alpha = 1;
       ctx.save();
@@ -705,10 +718,12 @@
 
     function updateStackedPositions(tipY, ballR) {
       const spacing = ballR * 1.7;
+      // 魚蛋由尖端向下叠，越早串到嘅越近尖端
       for (let i = 0; i < stackedBalls.length; i++) {
         const b = stackedBalls[i];
         b.baseR = getBallRadius();
         b.x = stickX;
+        // i=0 最近尖端
         b.y = tipY + (i + 0.55) * spacing;
       }
     }
@@ -753,7 +768,7 @@
       stickX = Math.max(30, Math.min(W - 30, stickX));
 
       const geo = getStickGeometry();
-      const tip = { tipX: stickX, tipY: geo.tipY - 10, r: 18 };
+      const tip = { tipX: stickX, tipY: geo.tipY - 8, r: 22 };
 
       for (let i = fallingBalls.length - 1; i >= 0; i--) {
         const b = fallingBalls[i];
@@ -833,6 +848,7 @@
     startBtn.addEventListener('click', startGame);
     restartBtn.addEventListener('click', restartGame);
 
+    // init size after layout
     function init() {
       resize();
       requestAnimationFrame(function() {
